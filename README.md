@@ -10,7 +10,7 @@ Clone git repository:
 
 ```sh
 git clone https://github.com/stxent/audio-player.git
-cd 
+cd audio-player
 git submodule update --init --recursive
 ```
 
