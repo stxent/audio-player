@@ -1,0 +1,15 @@
+[submodule "libs/xcore"]
+	path = libs/xcore
+	url = ../xcore.git
+[submodule "libs/halm"]
+	path = libs/halm
+	url = ../halm.git
+[submodule "libs/dpm"]
+	path = libs/dpm
+	url = ../dpm.git
+[submodule "libs/yaf"]
+	path = libs/yaf
+	url = ../yaf.git
+[submodule "libs/helix_mp3"]
+	path = libs/helix_mp3
+	url = ../helix_mp3.git
