@@ -1,5 +1,5 @@
 /*
- * board/lpc17xx_devkit/application/tasks.c
+ * board/lpc43xx_devkit/application/tasks.c
  * Copyright (C) 2022 xent
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
@@ -94,16 +94,23 @@ static void onCardUnmounted(void *argument)
 /*----------------------------------------------------------------------------*/
 static void onConversionCompleted(void *argument)
 {
+  static const int DELTA_THRESHOLD = 2;
+
   struct Board * const board = argument;
   uint16_t sample;
 
   ifRead(board->analogPackage.adc, &sample, sizeof(sample));
-  afAdd(&board->analogPackage.filter, sample);
 
-  if (!board->event.volume)
+  const int current = ((int)sample * 100) / 65535;
+  const int previous = board->analogPackage.value;
+
+  if (abs(current - previous) >= DELTA_THRESHOLD && !board->event.volume)
   {
     if (wqAdd(WQ_DEFAULT, volumeChangedTask, argument) == E_OK)
+    {
       board->event.volume = true;
+      board->analogPackage.value = (uint8_t)current;
+    }
   }
 }
 /*----------------------------------------------------------------------------*/
@@ -160,8 +167,8 @@ static void mountTask(void *argument)
   if (!board->fs.handle)
   {
     const struct MMCSDConfig cardConfig = {
-        .interface = board->memory.sdio,
-        .crc = false
+        .interface = board->memory.sdmmc,
+        .crc = true
     };
     board->memory.card = init(MMCSD, &cardConfig);
 
@@ -285,20 +292,10 @@ static void unmountTask(void *argument)
 /*----------------------------------------------------------------------------*/
 static void volumeChangedTask(void *argument)
 {
-  static const int DELTA_THRESHOLD = 2;
-
   struct Board * const board = argument;
-  const uint16_t average = afValue(&board->analogPackage.filter);
-  const int current = (uint8_t)(((int)average * 100) / 65535);
-  const int previous = board->analogPackage.value;
 
   board->event.volume = false;
-
-  if (abs(current - previous) >= DELTA_THRESHOLD)
-  {
-    board->analogPackage.value = (uint8_t)current;
-    codecSetVolume(board->codec.codec, board->analogPackage.value);
-  }
+  codecSetVolume(board->codec.codec, board->analogPackage.value);
 }
 /*----------------------------------------------------------------------------*/
 #ifdef ENABLE_DBG

@@ -16,9 +16,8 @@ MEMORY
   AHB (rw)   : ORIGIN = 0x50000000, LENGTH = 2M
   PPB (rw)   : ORIGIN = 0xE0000000, LENGTH = 1M
 
-  /* On-chip SRAM */
+  /* Local SRAM */
   SRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 32K
-
   /* AHB SRAM Banks */
   SRAM1 (rwx) : ORIGIN = 0x2007C000, LENGTH = 18K
   /* AHB SRAM Banks */
@@ -62,7 +61,6 @@ SECTIONS
     *(COMMON)
 
     _ebss = .;
-
   } >SRAM0
 
   .sram1 : ALIGN(4)

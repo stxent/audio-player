@@ -1,7 +1,7 @@
 Installation
 ------------
 
-Audio Player for MCU project supports playing MP3 and WAV files on LPC175X/LPC176X MCU. It requires GNU toolchain for ARM Cortex-M processors and CMake version 3.13.
+MCU Audio Player project supports playing MP3 and WAV files on LPC175x/LPC176x and LPC43xx MCU. It requires GNU toolchain for ARM Cortex-M processors and CMake version 3.13.
 
 Quickstart
 ----------
@@ -14,12 +14,21 @@ cd audio-player
 git submodule update --init --recursive
 ```
 
-Build release version (DFU disabled):
+Build release version (DFU disabled) for LPC17xx development board:
 
 ```sh
 mkdir build
 cd build
 cmake .. -DPLATFORM=LPC17XX -DBOARD=lpc17xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/xcore/toolchains/cortex-m3.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_MP3=ON -DUSE_LTO=OFF
+make
+```
+
+Build release version for LPC43xx development board:
+
+```sh
+mkdir build
+cd build
+cmake .. -DPLATFORM=LPC43XX -DBOARD=lpc43xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/xcore/toolchains/cortex-m4.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_MP3=ON -DUSE_LTO=OFF
 make
 ```
 

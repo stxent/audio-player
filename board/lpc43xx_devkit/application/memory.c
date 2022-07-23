@@ -1,5 +1,5 @@
 /*
- * board/lpc17xx_devkit/application/memory.c
+ * board/lpc43xx_devkit/application/memory.c
  * Copyright (C) 2022 xent
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
@@ -9,15 +9,10 @@
 typedef uint8_t I2SRxBuffer[I2S_RX_BUFFER_LENGTH];
 typedef uint8_t I2STxBuffer[I2S_TX_BUFFER_LENGTH];
 /*----------------------------------------------------------------------------*/
-// #ifdef CONFIG_ENABLE_MP3
-// I2SRxBuffer rxBuffers = 0;
-// #else
-// /* Total: 16384 bytes */
-// I2SRxBuffer rxBuffers[I2S_BUFFER_COUNT] __attribute__((section(".sram2")));
-// #endif
-
-void *rxBuffers = 0;
+/* Total: 16384 bytes */
+I2SRxBuffer rxBuffersData[I2S_BUFFER_COUNT] __attribute__((section(".sram2")));
+void *rxBuffers = rxBuffersData;
 /*----------------------------------------------------------------------------*/
 /* Total: 18432 bytes */
-I2STxBuffer txBuffersData[I2S_BUFFER_COUNT] __attribute__((section(".sram1")));
+I2STxBuffer txBuffersData[I2S_BUFFER_COUNT] __attribute__((section(".sram3")));
 void *txBuffers = txBuffersData;
