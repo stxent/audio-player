@@ -7,14 +7,31 @@
 #include "board.h"
 #include "memory.h"
 #include "tasks.h"
+#include <halm/core/cortex/nvic.h>
 #include <halm/generic/work_queue.h>
+#include <halm/gpio_bus.h>
+#include <halm/platform/lpc/backup_domain.h>
 #include <halm/platform/lpc/i2s_dma.h>
 #include <halm/timer.h>
 #include <assert.h>
 /*----------------------------------------------------------------------------*/
+#define DFU_BUTTON_MASK 0x00000006UL
+#define DFU_MAGIC_WORD  0x3A84508FUL
+/*----------------------------------------------------------------------------*/
 static const struct WorkQueueConfig workQueueConfig = {
     .size = 4
 };
+/*----------------------------------------------------------------------------*/
+void appBoardCheckBoot(struct Board *board)
+{
+  const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
+
+  if (!(value & DFU_BUTTON_MASK))
+  {
+    *(uint32_t *)backupDomainAddress() = DFU_MAGIC_WORD;
+    nvicResetCore();
+  }
+}
 /*----------------------------------------------------------------------------*/
 void appBoardInit(struct Board *board)
 {

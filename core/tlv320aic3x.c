@@ -86,7 +86,7 @@ static void codecWriteBuffer(struct TLV320AIC3x *codec, uint16_t address,
 
   if (count == sizeof(pageBuffer))
   {
-    uint8_t dataBuffer[2];
+    uint8_t dataBuffer[3];
 
     dataBuffer[0] = (uint8_t)address;
     memcpy(dataBuffer + 1, buffer, length);

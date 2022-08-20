@@ -72,6 +72,7 @@ struct Board
 /*----------------------------------------------------------------------------*/
 BEGIN_DECLS
 
+void appBoardCheckBoot(struct Board *);
 void appBoardInit(struct Board *);
 int appBoardStart(struct Board *);
 
