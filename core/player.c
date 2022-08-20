@@ -421,6 +421,7 @@ static bool parseHeaderMP3(struct Player *player, struct FsNode *node,
           {
             info->end = length;
             info->offset = headerPosition + (FsLength)offset;
+            info->offset &= ~(sizeof(void *) - 1);
             info->position = info->offset;
             info->rate = (uint32_t)frameInfo.samprate;
             info->channels = (uint8_t)frameInfo.nChans;

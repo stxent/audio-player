@@ -30,7 +30,7 @@ endif()
 set(FS_NAME_LENGTH 80 CACHE INTERNAL "Maximum length of filesystem entry name in bytes." FORCE)
 add_subdirectory(libs/xcore xcore)
 
-if(${USE_DBG})
+if(USE_DBG)
     set(CONFIG_CORE_CORTEX_MEMORY_DEBUG ON)
     set(CONFIG_CORE_CORTEX_MEMORY_PATTERN "0xDEADBEEF")
     set(CONFIG_GENERIC_WQ_LOAD ON)

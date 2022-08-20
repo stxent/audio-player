@@ -80,7 +80,7 @@ foreach(EXECUTABLE_NAME ${EXECUTABLES})
             add_test(${EXECUTABLE_NAME} ${EXECUTABLE_ARTIFACT})
         endif()
     else()
-        target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE -T"${PROJECT_BINARY_DIR}/application.ld")
+        target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE -T"${PROJECT_BINARY_DIR}/memory.ld")
 
         add_custom_command(TARGET ${EXECUTABLE_ARTIFACT} POST_BUILD
                 COMMAND "${CMAKE_OBJCOPY}" ${EXECUTABLE_ARTIFACT} ${FLAGS_OBJCOPY} -Obinary ${EXECUTABLE_NAME}.bin
