@@ -8,6 +8,7 @@
 #define BOARD_LPC17XX_DEVKIT_SHARED_BOARD_SHARED_H_
 /*----------------------------------------------------------------------------*/
 #include "analog_filter.h"
+#include <halm/generic/work_queue_irq.h>
 #include <xcore/helpers.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -17,7 +18,7 @@ struct GpioBus;
 struct Interface;
 struct Timer;
 /*----------------------------------------------------------------------------*/
-#define BOARD_BUTTON_PIN    PIN(2, 10)
+#define BOARD_ADC_PIN       PIN(0, 2)
 #define BOARD_BUTTON_1_PIN  PIN(1, 18)
 #define BOARD_BUTTON_2_PIN  PIN(1, 23)
 #define BOARD_BUTTON_3_PIN  PIN(1, 24)
@@ -26,6 +27,8 @@ struct Timer;
 #define BOARD_LED_G_PIN     PIN(1, 9)
 #define BOARD_LED_B_PIN     PIN(1, 8)
 #define BOARD_SDIO_CS_PIN   PIN(0, 22)
+
+DEFINE_WQ_IRQ(WQ_LP)
 
 struct AnalogPackage
 {

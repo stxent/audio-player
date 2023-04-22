@@ -17,9 +17,17 @@
 /*----------------------------------------------------------------------------*/
 #define DFU_BUTTON_MASK 0x00000006UL
 #define DFU_MAGIC_WORD  0x3A84508FUL
+
+DECLARE_WQ_IRQ(WQ_LP, SPI_ISR)
 /*----------------------------------------------------------------------------*/
 static const struct WorkQueueConfig workQueueConfig = {
     .size = 6
+};
+
+static const struct WorkQueueIrqConfig workQueueIrqConfig = {
+    .size = 1,
+    .irq = SPI_IRQ,
+    .priority = 0
 };
 /*----------------------------------------------------------------------------*/
 void appBoardCheckBoot(struct Board *board)
@@ -40,6 +48,8 @@ void appBoardInit(struct Board *board)
   /* Initialize Work Queue */
   WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
   assert(WQ_DEFAULT);
+  WQ_LP = init(WorkQueueIrq, &workQueueIrqConfig);
+  assert(WQ_LP);
 
   board->indication.blue = pinInit(BOARD_LED_B_PIN);
   pinOutput(board->indication.blue, false);
@@ -86,6 +96,7 @@ void appBoardInit(struct Board *board)
 /*----------------------------------------------------------------------------*/
 int appBoardStart(struct Board *board __attribute__((unused)))
 {
+  wqStart(WQ_LP);
   wqStart(WQ_DEFAULT);
   return 0;
 }

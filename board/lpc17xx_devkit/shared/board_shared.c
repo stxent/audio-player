@@ -23,8 +23,20 @@
 /*----------------------------------------------------------------------------*/
 #define ENABLE_SPI_DMA
 /*----------------------------------------------------------------------------*/
+#define PRI_TIMER_DBG 2
+
+#define PRI_TIMER_MEM 1
+#define PRI_I2C       1
+#define PRI_I2S       1
+#define PRI_SERIAL    1
+#define PRI_SPI       1
+/* GPDMA 1 */
+
+#define PRI_TIMER_SYS 0
+/* WQ_LP 0 */
+/*----------------------------------------------------------------------------*/
 static const PinNumber adcPinArray[] = {
-    PIN(0, 3),
+    BOARD_ADC_PIN,
     0
 };
 
@@ -56,13 +68,13 @@ static const struct GpTimerConfig adcTimerConfig = {
 
 static const struct GpTimerConfig loadTimerConfig = {
     .frequency = 1000000,
-    .priority = 1,
+    .priority = PRI_TIMER_DBG,
     .channel = 3
 };
 
 static const struct GpTimerConfig memoryTimerConfig = {
     .frequency = 1000000,
-    .priority = 0,
+    .priority = PRI_TIMER_MEM,
     .channel = 0
 };
 
@@ -70,7 +82,7 @@ static const struct I2CConfig i2cConfig = {
     .rate = 400000, /* Initial rate */
     .scl = PIN(0, 11),
     .sda = PIN(0, 10),
-    .priority = 0,
+    .priority = PRI_I2C,
     .channel = 2
 };
 
@@ -88,7 +100,7 @@ static const struct I2SDmaConfig i2sConfig = {
         .sda = PIN(0, 6),
         .dma = 1
     },
-    .priority = 0,
+    .priority = PRI_I2S,
     .channel = 0,
     .mono = false,
     .slave = false
@@ -97,10 +109,11 @@ static const struct I2SDmaConfig i2sConfig = {
 static const struct SerialConfig serialConfig = {
     .rxLength = 16,
     .txLength = 128,
-    .rate = 19200,
+    .rate = 115200,
     .rx = PIN(0, 16),
     .tx = PIN(0, 15),
     .channel = 1
+    .priority = PRI_SERIAL,
 };
 
 #ifdef ENABLE_SPI_DMA
@@ -119,7 +132,7 @@ static const struct SpiConfig spiConfig[] = {
     .miso = PIN(0, 17),
     .mosi = PIN(0, 18),
     .sck = PIN(1, 20),
-    .priority = 0,
+    .priority = PRI_SPI,
     .channel = 0,
     .mode = 3
 };
@@ -170,7 +183,7 @@ struct Timer *boardMakeMemoryTimer(void)
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeMountTimer(void)
 {
-  return init(Rit, 0);
+  return init(Rit, &(struct RitConfig){PRI_TIMER_SYS});
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2C(void)
@@ -188,8 +201,8 @@ struct Interface *boardMakeSDIO(struct Interface *spi, struct Timer *timer)
   const struct SdioSpiConfig config = {
       .interface = spi,
       .timer = timer,
-      .wq = 0,
-      .blocks = 0,
+      .wq = WQ_LP,
+      .blocks = 32,
       .cs = BOARD_SDIO_CS_PIN
   };
 
@@ -241,7 +254,7 @@ bool boardSetupButtonPackage(struct ButtonPackage *package)
   if (!package->buttons)
     return false;
 
-  package->timer = init(SysTickTimer, 0);
+  package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
   if (!package->timer)
     return false;
 

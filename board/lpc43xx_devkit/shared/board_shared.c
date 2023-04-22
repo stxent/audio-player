@@ -19,6 +19,16 @@
 #include <halm/platform/lpc/serial.h>
 #include <string.h>
 /*----------------------------------------------------------------------------*/
+#define PRI_TIMER_DBG 2
+
+#define PRI_I2C       1
+#define PRI_I2S       1
+#define PRI_SDMMC     1
+#define PRI_SERIAL    1
+/* GPDMA 1 */
+
+#define PRI_TIMER_SYS 0
+/*----------------------------------------------------------------------------*/
 static const PinNumber adcPinArray[] = {
     PIN(PORT_ADC, 5),
     0
@@ -28,7 +38,7 @@ static const struct AdcDmaConfig adcConfig = {
     .pins = adcPinArray,
     .event = ADC_CTOUT_15,
     .channel = 0,
-    .dma = 4
+    .dma = 2
 };
 
 static const struct SimpleGpioBusConfig busConfig = {
@@ -51,7 +61,7 @@ static const struct GpTimerConfig adcTimerConfig = {
 
 static const struct GpTimerConfig loadTimerConfig = {
     .frequency = 1000000,
-    .priority = 1,
+    .priority = PRI_TIMER_DBG,
     .channel = 1
 };
 
@@ -59,7 +69,7 @@ static const struct I2CConfig i2cConfig = {
     .rate = 400000, /* Initial rate */
     .scl = PIN(PORT_I2C, PIN_I2C0_SCL),
     .sda = PIN(PORT_I2C, PIN_I2C0_SDA),
-    .priority = 0,
+    .priority = PRI_I2C,
     .channel = 0
 };
 
@@ -68,16 +78,16 @@ static const struct I2SDmaConfig i2sConfig = {
     .rate = 44100,
     .width = I2S_WIDTH_16,
     .tx = {
-        .sda = PIN(PORT_3, 2),
-        .sck = PIN(PORT_3, 0),
-        .ws = PIN(PORT_3, 1),
+        .sda = PIN(PORT_7, 2),
+        .sck = PIN(PORT_4, 7),
+        .ws = PIN(PORT_7, 1),
         .dma = 0
     },
     .rx = {
         .sda = PIN(PORT_6, 2),
         .dma = 1
     },
-    .priority = 0,
+    .priority = PRI_I2S,
     .channel = 0,
     .mono = false,
     .slave = false
@@ -86,17 +96,22 @@ static const struct I2SDmaConfig i2sConfig = {
 static const struct SerialConfig serialConfig = {
     .rxLength = 16,
     .txLength = 128,
-    .rate = 19200,
-    .rx = PIN(PORT_F, 11),
-    .tx = PIN(PORT_F, 10),
-    .channel = 0
+    .rate = 115200,
+    .rx = PIN(PORT_1, 14),
+    .tx = PIN(PORT_5, 6),
+    .priority = PRI_SERIAL,
+    .channel = 1
 };
 
 static const struct SdmmcConfig sdmmcConfig = {
-    .rate = 12000000,
-    .clk = PIN(PORT_CLK, 2),
-    .cmd = PIN(PORT_C, 10),
-    .dat0 = PIN(PORT_C, 4)
+    .rate = 17000000,
+    .clk = PIN(PORT_CLK, 0),
+    .cmd = PIN(PORT_1, 6),
+    .dat0 = PIN(PORT_1, 9),
+    .dat1 = PIN(PORT_1, 10),
+    .dat2 = PIN(PORT_1, 11),
+    .dat3 = PIN(PORT_1, 12),
+    .priority = PRI_SDMMC
 };
 /*----------------------------------------------------------------------------*/
 static const struct GenericClockConfig initialClockConfig = {
@@ -132,7 +147,7 @@ struct Entity *boardMakeCodec(struct Interface *i2c)
   const struct TLV320AIC3xConfig codecConfig = {
       .interface = i2c,
       .address = 0,
-      .rate = 0,
+      .rate = i2sConfig.rate,
       .reset = 0
   };
   struct TLV320AIC3x * const codec = init(TLV320AIC3x, &codecConfig);
@@ -153,7 +168,7 @@ struct Timer *boardMakeLoadTimer(void)
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeMountTimer(void)
 {
-  return init(Rit, 0);
+  return init(Rit, &(struct RitConfig){PRI_TIMER_SYS});
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2C(void)
@@ -204,7 +219,7 @@ bool boardSetupButtonPackage(struct ButtonPackage *package)
   if (!package->buttons)
     return false;
 
-  package->timer = init(SysTickTimer, 0);
+  package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
   if (!package->timer)
     return false;
 

@@ -169,7 +169,7 @@ static void mountTask(void *argument)
   {
     const struct MMCSDConfig cardConfig = {
         .interface = board->memory.sdio,
-        .crc = false
+        .crc = true
     };
     board->memory.card = init(MMCSD, &cardConfig);
 
