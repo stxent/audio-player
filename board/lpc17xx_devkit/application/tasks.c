@@ -28,6 +28,7 @@ static void mountTask(void *);
 static void playNextTask(void *);
 static void playPauseTask(void *);
 static void playPreviousTask(void *);
+static void seedRandomTask(void *);
 static void startupTask(void *);
 static void stopPlayingTask(void *);
 static void unmountTask(void *);
@@ -98,7 +99,13 @@ static void onConversionCompleted(void *argument)
   uint16_t sample;
 
   ifRead(board->analogPackage.adc, &sample, sizeof(sample));
-  afAdd(&board->analogPackage.filter, sample);
+  afAdd(&board->analogPackage.filter, sample >> 4);
+
+  if (!board->event.seeded && afSeedReady(&board->analogPackage.filter))
+  {
+    if (wqAdd(WQ_DEFAULT, seedRandomTask, argument) == E_OK)
+      board->event.seeded = true;
+  }
 
   if (!board->event.volume)
   {
@@ -111,7 +118,8 @@ static void onMountTimerEvent(void *argument)
 {
   struct Board * const board = argument;
 
-  if (!board->fs.handle)
+  /* Card should be mounted after RNG initialization */
+  if (board->event.seeded && !board->fs.handle)
     wqAdd(WQ_DEFAULT, mountTask, board);
 }
 /*----------------------------------------------------------------------------*/
@@ -227,6 +235,22 @@ static void playPreviousTask(void *argument)
   playerPlayPrevious(&board->player);
 }
 /*----------------------------------------------------------------------------*/
+static void seedRandomTask(void *argument)
+{
+  const struct Board * const board = argument;
+  const uint32_t seed = afSeedValue(&board->analogPackage.filter);
+
+  srand(seed);
+
+#ifdef ENABLE_DBG
+  size_t count;
+  char text[64];
+
+  count = sprintf(text, "seed %lu\r\n", (unsigned long)seed);
+  ifWrite(board->indication.serial, text, count);
+#endif
+}
+/*----------------------------------------------------------------------------*/
 static void startupTask(void *argument)
 {
   struct Board * const board = argument;
@@ -250,7 +274,7 @@ static void startupTask(void *argument)
 
   /* 2 * 10 Hz ADC trigger rate, start ADC sampling */
   timerSetOverflow(board->analogPackage.timer,
-      timerGetFrequency(board->analogPackage.timer) / 20);
+      timerGetFrequency(board->analogPackage.timer) / 200);
   timerEnable(board->analogPackage.timer);
 
 #ifdef ENABLE_DBG
@@ -289,7 +313,7 @@ static void volumeChangedTask(void *argument)
 
   struct Board * const board = argument;
   const uint16_t average = afValue(&board->analogPackage.filter);
-  const int current = (uint8_t)(((int)average * 100) / 65535);
+  const int current = (uint8_t)(((int)average * 100) / 4096);
   const int previous = board->analogPackage.value;
 
   board->event.volume = false;

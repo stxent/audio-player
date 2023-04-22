@@ -19,7 +19,7 @@
 #define DFU_MAGIC_WORD  0x3A84508FUL
 /*----------------------------------------------------------------------------*/
 static const struct WorkQueueConfig workQueueConfig = {
-    .size = 4
+    .size = 6
 };
 /*----------------------------------------------------------------------------*/
 void appBoardCheckBoot(struct Board *board)
@@ -70,6 +70,7 @@ void appBoardInit(struct Board *board)
   board->memory.sdio = boardMakeSDIO(board->memory.spi, board->memory.timer);
   board->memory.wrapper = 0;
 
+  board->event.seeded = false;
   board->event.volume = false;
 
   board->debug.timer = boardMakeLoadTimer();
@@ -80,6 +81,7 @@ void appBoardInit(struct Board *board)
   playerInit(&board->player, board->audio.rx, board->audio.tx,
       I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH,
       rxBuffers, txBuffers, rand);
+  playerShuffleControl(&board->player, true);
 }
 /*----------------------------------------------------------------------------*/
 int appBoardStart(struct Board *board __attribute__((unused)))

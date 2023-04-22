@@ -12,11 +12,13 @@
 #include <stddef.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
-#define ANALOG_FILTER_SIZE 7
+#define ANALOG_FILTER_SIZE 11
 /*----------------------------------------------------------------------------*/
 struct AnalogFilter
 {
   size_t index;
+  size_t iteration;
+  uint32_t seed;
   uint32_t sum;
   uint16_t buffer[ANALOG_FILTER_SIZE];
   bool first;
@@ -26,6 +28,8 @@ BEGIN_DECLS
 
 void afAdd(struct AnalogFilter *, uint16_t);
 void afInit(struct AnalogFilter *);
+bool afSeedReady(const struct AnalogFilter *);
+uint32_t afSeedValue(const struct AnalogFilter *);
 uint16_t afValue(const struct AnalogFilter *);
 
 END_DECLS

@@ -58,6 +58,7 @@ struct Board
 
   struct
   {
+    bool seeded;
     bool volume;
   } event;
 
