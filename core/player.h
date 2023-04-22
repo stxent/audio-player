@@ -83,13 +83,18 @@ struct Player
     struct TrackInfo info;
   } playback;
 
+  /* Helix MP3 decoder instance */
   void *mp3Decoder;
+  /* Random number generation function */
+  int (*random)(void);
+  /* Enabe track shuffle mode */
+  bool shuffle;
 };
 /*----------------------------------------------------------------------------*/
 BEGIN_DECLS
 
 bool playerInit(struct Player *, struct Stream *, struct Stream *,
-    size_t, size_t, size_t, void *, void *);
+    size_t, size_t, size_t, void *, void *, int (*)(void));
 void playerDeinit(struct Player *);
 void playerPlayNext(struct Player *);
 void playerPlayPause(struct Player *);
@@ -100,6 +105,7 @@ void playerSetControlCallback(struct Player *,
     void (*)(void *, uint32_t, uint8_t), void *);
 void playerSetStateCallback(struct Player *,
     void (*)(void *, enum PlayerState), void *);
+void playerShuffleControl(struct Player *, bool);
 void playerStopPlaying(struct Player *);
 
 END_DECLS

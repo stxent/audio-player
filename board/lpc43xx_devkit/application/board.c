@@ -60,7 +60,7 @@ void appBoardInit(struct Board *board)
   /* Init player instance */
   playerInit(&board->player, board->audio.rx, board->audio.tx,
       I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH,
-      rxBuffers, txBuffers);
+      rxBuffers, txBuffers, 0);
 }
 /*----------------------------------------------------------------------------*/
 int appBoardStart(struct Board *board __attribute__((unused)))

@@ -15,7 +15,8 @@
 #include <xcore/fs/utils.h>
 #include <xcore/memory.h>
 /*----------------------------------------------------------------------------*/
-#define MIN_BUFFER_LEVEL 64
+#define MAX_READ_RETRIES  4
+#define MIN_BUFFER_LEVEL  64
 
 enum TrackType
 {
@@ -42,6 +43,7 @@ static void resetPlayback(struct Player *, struct FsNode *, size_t,
     const struct TrackInfo *);
 static void scanNodeDescendants(struct Player *, struct FsNode *,
     const char *, unsigned int);
+static void shuffleTracks(PathArray *, int (*)(void));
 static void sortTracks(PathArray *);
 static int trackCompare(const void *, const void *);
 
@@ -104,14 +106,20 @@ static bool fetchNextChunkMP3(struct Player *player, uint8_t *buffer,
       if (offset != 0)
         chunk -= (size_t)offset;
 
-      res = fsNodeRead(
-          player->playback.file,
-          FS_NODE_DATA,
-          info->position,
-          player->buffer,
-          chunk,
-          &player->bufferSize
-      );
+      for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
+      {
+        res = fsNodeRead(
+            player->playback.file,
+            FS_NODE_DATA,
+            info->position,
+            player->buffer,
+            chunk,
+            &player->bufferSize
+        );
+
+        if (res == E_OK)
+          break;
+      }
 
       if (res == E_OK)
       {
@@ -143,14 +151,20 @@ static bool fetchNextChunkMP3(struct Player *player, uint8_t *buffer,
         memmove(player->buffer, player->buffer + player->bufferPosition, left);
       }
 
-      res = fsNodeRead(
-          player->playback.file,
-          FS_NODE_DATA,
-          info->position,
-          player->buffer + left,
-          sizeof(player->buffer) / 2,
-          &read
-      );
+      for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
+      {
+        res = fsNodeRead(
+            player->playback.file,
+            FS_NODE_DATA,
+            info->position,
+            player->buffer + left,
+            sizeof(player->buffer) / 2,
+            &read
+        );
+
+        if (res == E_OK)
+          break;
+      }
 
       if (res == E_OK)
       {
@@ -228,6 +242,7 @@ static bool fetchNextChunkWAV(struct Player *player, uint8_t *buffer,
   size_t chunk = capacity;
   const FsLength left = info->end - info->position;
   const FsLength offset = info->position % chunk;
+  enum Result res;
 
   /* Align the size of file read requests along file system sector size */
   if (offset != 0)
@@ -236,8 +251,20 @@ static bool fetchNextChunkWAV(struct Player *player, uint8_t *buffer,
   if (left < chunk)
     chunk = (size_t)left;
 
-  const enum Result res = fsNodeRead(player->playback.file, FS_NODE_DATA,
-      info->position, buffer, chunk, count);
+  for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
+  {
+    res = fsNodeRead(
+        player->playback.file,
+        FS_NODE_DATA,
+        info->position,
+        buffer,
+        chunk,
+        count
+    );
+
+    if (res == E_OK)
+      break;
+  }
 
   if (res == E_OK && *count == chunk)
   {
@@ -397,9 +424,22 @@ static bool parseHeaderMP3(struct Player *player, struct FsNode *node,
   while (headerPosition < MIN(SCAN_LENGTH, length))
   {
     size_t count;
+    enum Result res;
 
-    const enum Result res = fsNodeRead(node, FS_NODE_DATA, headerPosition,
-        player->buffer, sizeof(player->buffer), &count);
+    for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
+    {
+      res = fsNodeRead(
+          node,
+          FS_NODE_DATA,
+          headerPosition,
+          player->buffer,
+          sizeof(player->buffer),
+          &count
+      );
+
+      if (res == E_OK)
+        break;
+    }
 
     if (res == E_OK && count == sizeof(player->buffer))
     {
@@ -449,14 +489,27 @@ static bool parseHeaderWAV(struct Player *player, struct FsNode *node,
     struct TrackInfo *info)
 {
   size_t count;
-  const enum Result res = fsNodeRead(node, FS_NODE_DATA, 0,
-      player->buffer, sizeof(struct WavHeader), &count);
+  enum Result res;
 
-  const struct WavHeader * const header =
-      (const struct WavHeader *)player->buffer;
+  for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
+  {
+    res = fsNodeRead(
+        node,
+        FS_NODE_DATA,
+        0,
+        player->buffer,
+        sizeof(struct WavHeader),
+        &count
+    );
+
+    if (res == E_OK)
+      break;
+  }
 
   if (res == E_OK && count == sizeof(struct WavHeader))
   {
+    const struct WavHeader * const header =
+        (const struct WavHeader *)player->buffer;
     const uint16_t channels = fromLittleEndian16(header->numChannels);
     const uint16_t width = header->bitsPerSample >> 3;
 
@@ -532,6 +585,29 @@ static void resetPlayback(struct Player *player, struct FsNode *node,
         .type = TRACK_UNKNOWN
     };
     player->playback.playing = false;
+  }
+}
+/*----------------------------------------------------------------------------*/
+static void shuffleTracks(PathArray *tracks, int (*random)(void))
+{
+  const size_t count = pathArraySize(tracks);
+
+  for (size_t index = 0; index < count; ++index)
+  {
+    const size_t i = random() % count;
+    size_t j;
+
+    do
+    {
+      j = random() % count;
+    }
+    while (i == j);
+
+    FilePath swap;
+
+    memcpy(&swap, pathArrayAt(tracks, i), sizeof(FilePath));
+    memcpy(pathArrayAt(tracks, i), pathArrayAt(tracks, j), sizeof(FilePath));
+    memcpy(pathArrayAt(tracks, j), &swap, sizeof(FilePath));
   }
 }
 /*----------------------------------------------------------------------------*/
@@ -644,7 +720,7 @@ static inline void stopPlayingTask(void *argument)
 /*----------------------------------------------------------------------------*/
 bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
     size_t buffers, size_t rxLength, size_t txLength,
-    void *rxArena, void *txArena)
+    void *rxArena, void *txArena, int (*random)(void))
 {
   if (rxLength > txLength)
     return false;
@@ -672,6 +748,8 @@ bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
   player->controlCallbackArgument = 0;
   player->stateCallback = mockStateCallback;
   player->stateCallbackArgument = 0;
+  player->random = random;
+  player->shuffle = false;
 
   player->rx = rx;
   player->tx = tx;
@@ -843,7 +921,12 @@ void playerScanFiles(struct Player *player, struct FsHandle *handle)
     fsNodeFree(root);
 
     if (!pathArrayEmpty(&player->tracks))
-      sortTracks(&player->tracks);
+    {
+      if (player->shuffle)
+        shuffleTracks(&player->tracks, player->random);
+      else
+        sortTracks(&player->tracks);
+    }
   }
   else
     player->handle = 0;
@@ -877,6 +960,12 @@ void playerSetStateCallback(struct Player *player,
     player->stateCallbackArgument = 0;
     player->stateCallback = mockStateCallback;
   }
+}
+/*----------------------------------------------------------------------------*/
+void playerShuffleControl(struct Player *player, bool enable)
+{
+  assert(!enable || player->random);
+  player->shuffle = enable;
 }
 /*----------------------------------------------------------------------------*/
 void playerStopPlaying(struct Player *player)
