@@ -96,6 +96,8 @@ BEGIN_DECLS
 bool playerInit(struct Player *, struct Stream *, struct Stream *,
     size_t, size_t, size_t, void *, void *, int (*)(void));
 void playerDeinit(struct Player *);
+size_t playerGetCurrentTrack(const struct Player *);
+size_t playerGetTrackCount(const struct Player *);
 void playerPlayNext(struct Player *);
 void playerPlayPause(struct Player *);
 void playerPlayPrevious(struct Player *);

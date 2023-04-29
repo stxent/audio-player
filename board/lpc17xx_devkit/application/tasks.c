@@ -84,6 +84,15 @@ static void onCardMounted(void *argument)
   pinSet(board->indication.green);
 
   playerScanFiles(&board->player, board->fs.handle);
+
+#ifdef ENABLE_DBG
+  size_t count;
+  char text[64];
+
+  count = sprintf(text, "card mounted, tracks %lu\r\n",
+      (unsigned long)playerGetTrackCount(&board->player));
+  ifWrite(board->system.serial, text, count);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 static void onCardUnmounted(void *argument)
@@ -163,6 +172,26 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       wqAdd(WQ_DEFAULT, unmountTask, board);
       break;
   }
+
+#ifdef ENABLE_DBG
+  static const char *STATE_NAMES[] = {
+      "PLAYING",
+      "PAUSED",
+      "STOPPED",
+      "ERROR"
+  };
+  size_t count;
+  size_t index = playerGetCurrentTrack(&board->player);
+  size_t total = playerGetTrackCount(&board->player);
+  char text[64];
+
+  count = sprintf(text, "player state %s track %lu/%lu\r\n",
+      STATE_NAMES[state],
+      (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
+      (unsigned long)total
+  );
+  ifWrite(board->system.serial, text, count);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 static void mountTask(void *argument)

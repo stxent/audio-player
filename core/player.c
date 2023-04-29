@@ -811,6 +811,16 @@ void playerDeinit(struct Player *player)
   free(player->rxReq);
 }
 /*----------------------------------------------------------------------------*/
+size_t playerGetCurrentTrack(const struct Player *player)
+{
+  return player->playback.index;
+}
+/*----------------------------------------------------------------------------*/
+size_t playerGetTrackCount(const struct Player *player)
+{
+  return pathArraySize(&player->tracks);
+}
+/*----------------------------------------------------------------------------*/
 void playerPlayNext(struct Player *player)
 {
   /* Find a next track in the list */
@@ -867,7 +877,13 @@ static void scanNodeDescendants(struct Player *player, struct FsNode *root,
     const char *base, unsigned int level)
 {
   static const unsigned int MAX_LEVEL = 2;
-  struct FsNode * const child = fsNodeHead(root);
+  struct FsNode *child = NULL;
+
+  for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
+  {
+    if ((child = fsNodeHead(root)) != NULL)
+      break;
+  }
 
   if (child != NULL)
   {
@@ -878,19 +894,28 @@ static void scanNodeDescendants(struct Player *player, struct FsNode *root,
       FilePath name = {{0}};
       FilePath path = {{0}};
 
-      res = fsNodeRead(child, FS_NODE_NAME, 0, name.data, sizeof(name), 0);
+      for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
+      {
+        res = fsNodeRead(child, FS_NODE_NAME, 0, name.data, sizeof(name),
+            NULL);
+
+        if (res == E_OK)
+          break;
+      }
 
       if (res == E_OK && !isReservedName(name.data))
       {
+        const bool isAudioFile = isFileSupported(name.data);
+
         fsJoinPaths(path.data, base, name.data);
 
-        if (level < MAX_LEVEL)
+        if (level < MAX_LEVEL && !isAudioFile)
         {
           /* Attention to stack size: recursive call */
           scanNodeDescendants(player, child, path.data, level + 1);
         }
 
-        if (isFileSupported(name.data))
+        if (isAudioFile)
         {
           FsLength length;
 
@@ -899,7 +924,13 @@ static void scanNodeDescendants(struct Player *player, struct FsNode *root,
         }
       }
 
-      res = fsNodeNext(child);
+      for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
+      {
+        res = fsNodeNext(child);
+
+        if (res == E_OK || res == E_ENTRY)
+          break;
+      }
     }
 
     fsNodeFree(child);
