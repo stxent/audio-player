@@ -13,7 +13,7 @@
 #include <assert.h>
 /*----------------------------------------------------------------------------*/
 static const struct WorkQueueConfig workQueueConfig = {
-    .size = 4
+    .size = 8
 };
 /*----------------------------------------------------------------------------*/
 void appBoardInit(struct Board *board)

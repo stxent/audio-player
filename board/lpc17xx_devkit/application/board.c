@@ -21,7 +21,7 @@
 DECLARE_WQ_IRQ(WQ_LP, SPI_ISR)
 /*----------------------------------------------------------------------------*/
 static const struct WorkQueueConfig workQueueConfig = {
-    .size = 6
+    .size = 8
 };
 
 static const struct WorkQueueIrqConfig workQueueIrqConfig = {
@@ -92,6 +92,7 @@ void appBoardInit(struct Board *board)
   board->memory.sdio = boardMakeSDIO(board->memory.spi, board->memory.timer);
   board->memory.wrapper = NULL;
 
+  board->event.mount = false;
   board->event.seeded = false;
   board->event.volume = false;
 

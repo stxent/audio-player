@@ -63,6 +63,7 @@ struct Board
 
   struct
   {
+    bool mount;
     bool seeded;
     bool volume;
   } event;

@@ -51,7 +51,7 @@ static const ButtonCallback BUTTON_TASKS[] = {
 /*----------------------------------------------------------------------------*/
 static void onButtonCheckEvent(void *argument)
 {
-  static const uint8_t DEBOUNCE_THRESHOLD = 4;
+  static const uint8_t DEBOUNCE_THRESHOLD = 3;
 
   struct Board * const board = argument;
   const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
@@ -68,7 +68,8 @@ static void onButtonCheckEvent(void *argument)
     }
     else
     {
-      board->buttonPackage.debounce[i] = 0;
+      if (board->buttonPackage.debounce[i] > 0)
+        --board->buttonPackage.debounce[i];
     }
   }
 
@@ -132,8 +133,11 @@ static void onMountTimerEvent(void *argument)
   struct Board * const board = argument;
 
   /* Card should be mounted after RNG initialization */
-  if (board->event.seeded && !board->fs.handle)
-    wqAdd(WQ_DEFAULT, mountTask, board);
+  if (board->event.seeded && !board->event.mount && !board->fs.handle)
+  {
+    if (wqAdd(WQ_DEFAULT, mountTask, board) == E_OK)
+      board->event.mount = true;
+  }
 }
 /*----------------------------------------------------------------------------*/
 static void onPlayerFormatChanged(void *argument, uint32_t rate,
@@ -197,6 +201,8 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
 static void mountTask(void *argument)
 {
   struct Board * const board = argument;
+
+  board->event.mount = false;
 
   if (board->fs.handle == NULL)
   {
