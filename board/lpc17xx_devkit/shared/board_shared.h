@@ -19,15 +19,31 @@ struct Interface;
 struct Timer;
 struct Watchdog;
 /*----------------------------------------------------------------------------*/
-#define BOARD_ADC_PIN       PIN(0, 2)
-#define BOARD_BUTTON_1_PIN  PIN(1, 18)
-#define BOARD_BUTTON_2_PIN  PIN(1, 23)
-#define BOARD_BUTTON_3_PIN  PIN(1, 24)
-#define BOARD_BUTTON_4_PIN  PIN(1, 26)
-#define BOARD_LED_R_PIN     PIN(1, 10)
-#define BOARD_LED_G_PIN     PIN(1, 9)
-#define BOARD_LED_B_PIN     PIN(1, 8)
-#define BOARD_SDIO_CS_PIN   PIN(0, 22)
+#define AUDIOBOX_V1
+
+#ifdef AUDIOBOX_V1
+#  define BOARD_ADC_PIN         PIN(0, 2)
+#  define BOARD_BUTTON_1_PIN    PIN(0, 15)
+#  define BOARD_BUTTON_2_PIN    PIN(4, 28)
+#  define BOARD_BUTTON_3_PIN    PIN(0, 16)
+#  define BOARD_BUTTON_4_PIN    PIN(4, 29)
+#  define BOARD_CODEC_RESET_PIN PIN(0, 3)
+#  define BOARD_LED_R_PIN       PIN(1, 18)
+#  define BOARD_LED_G_PIN       PIN(1, 23)
+#  define BOARD_LED_B_PIN       PIN(1, 24)
+#  define BOARD_SDIO_CS_PIN     PIN(0, 22)
+#else
+#  define BOARD_ADC_PIN         PIN(0, 2)
+#  define BOARD_BUTTON_1_PIN    PIN(1, 18)
+#  define BOARD_BUTTON_2_PIN    PIN(1, 23)
+#  define BOARD_BUTTON_3_PIN    PIN(1, 24)
+#  define BOARD_BUTTON_4_PIN    PIN(1, 26)
+#  define BOARD_CODEC_RESET_PIN PIN(0, 3)
+#  define BOARD_LED_R_PIN       PIN(1, 10)
+#  define BOARD_LED_G_PIN       PIN(1, 9)
+#  define BOARD_LED_B_PIN       PIN(1, 8)
+#  define BOARD_SDIO_CS_PIN     PIN(0, 22)
+#endif
 
 DEFINE_WQ_IRQ(WQ_LP)
 

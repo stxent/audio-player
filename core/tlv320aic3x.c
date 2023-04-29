@@ -142,17 +142,18 @@ static enum Result codecInit(void *object, const void *arguments)
 
   struct TLV320AIC3x * const codec = object;
 
-  // codec->reset = pinInit(config->reset);
-  // assert(pinValid(codec->reset));
-  // pinOutput(codec->reset, true);
+  codec->reset = pinInit(config->reset);
+  assert(pinValid(codec->reset));
+  pinOutput(codec->reset, true);
+
+  pinReset(codec->reset);
+  mdelay(10);
+  pinSet(codec->reset);
+  mdelay(10);
 
   codec->interface = config->interface;
   codec->address = config->address ? config->address : CODEC_ADDRESS;
   codec->rate = config->rate ? config->rate : CODEC_RATE;
-
-  // pinReset(codec->reset);
-  // mdelay(10);
-  // pinSet(codec->reset);
 
   initialConfig(codec);
 

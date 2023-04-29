@@ -8,6 +8,7 @@
 #include "tlv320aic3x.h"
 #include <dpm/button.h>
 #include <halm/core/cortex/systick.h>
+#include <halm/generic/i2c.h>
 #include <halm/generic/sdio_spi.h>
 #include <halm/gpio_bus.h>
 #include <halm/platform/lpc/adc_dma.h>
@@ -164,7 +165,7 @@ struct Entity *boardMakeCodec(struct Interface *i2c)
       .interface = i2c,
       .address = 0,
       .rate = 0,
-      .reset = 0
+      .reset = BOARD_CODEC_RESET_PIN
   };
   struct TLV320AIC3x * const codec = init(TLV320AIC3x, &codecConfig);
 
@@ -194,7 +195,12 @@ struct Timer *boardMakeMountTimer(void)
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2C(void)
 {
-  return init(I2C, &i2cConfig);
+  struct Interface * const i2c = init(I2C, &i2cConfig);
+
+  if (i2c != NULL)
+    ifSetParam(i2c, IF_I2C_BUS_RECOVERY, NULL);
+
+  return i2c;
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2S(void)
