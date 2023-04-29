@@ -17,6 +17,7 @@ struct Entity;
 struct GpioBus;
 struct Interface;
 struct Timer;
+struct Watchdog;
 /*----------------------------------------------------------------------------*/
 #define BOARD_ADC_PIN       PIN(0, 2)
 #define BOARD_BUTTON_1_PIN  PIN(1, 18)
@@ -57,6 +58,7 @@ struct Interface *boardMakeI2S(void);
 struct Interface *boardMakeSDIO(struct Interface *, struct Timer *);
 struct Interface *boardMakeSerial(void);
 struct Interface *boardMakeSPI(void);
+struct Watchdog *boardMakeWatchdog(void);
 
 bool boardSetupAnalogPackage(struct AnalogPackage *);
 bool boardSetupButtonPackage(struct ButtonPackage *);

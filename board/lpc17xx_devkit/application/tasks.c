@@ -12,6 +12,7 @@
 #include <halm/gpio_bus.h>
 #include <halm/generic/mmcsd.h>
 #include <halm/timer.h>
+#include <halm/watchdog.h>
 #include <halm/wq.h>
 #include <yaf/fat32.h>
 #include <stdio.h>
@@ -70,6 +71,9 @@ static void onButtonCheckEvent(void *argument)
       board->buttonPackage.debounce[i] = 0;
     }
   }
+
+  if (board->system.watchdog != NULL)
+    watchdogReload(board->system.watchdog);
 }
 /*----------------------------------------------------------------------------*/
 static void onCardMounted(void *argument)
@@ -247,7 +251,7 @@ static void seedRandomTask(void *argument)
   char text[64];
 
   count = sprintf(text, "seed %lu\r\n", (unsigned long)seed);
-  ifWrite(board->indication.serial, text, count);
+  ifWrite(board->system.serial, text, count);
 #endif
 }
 /*----------------------------------------------------------------------------*/
@@ -345,7 +349,7 @@ static void debugInfoTask(void *argument)
   char text[64];
 
   count = sprintf(text, "heap %u ticks %u cpu %u%%\r\n", used, loops, load);
-  ifWrite(board->indication.serial, text, count);
+  ifWrite(board->system.serial, text, count);
 }
 #endif
 /*----------------------------------------------------------------------------*/

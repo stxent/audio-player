@@ -44,7 +44,6 @@ struct Board
     struct Pin blue;
     struct Pin green;
     struct Pin red;
-    struct Interface *serial;
   } indication;
 
   struct
@@ -55,6 +54,12 @@ struct Board
     struct Interface *wrapper;
     struct Timer *timer;
   } memory;
+
+  struct
+  {
+    struct Interface *serial;
+    struct Watchdog *watchdog;
+  } system;
 
   struct
   {

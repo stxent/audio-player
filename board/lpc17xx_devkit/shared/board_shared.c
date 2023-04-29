@@ -19,6 +19,7 @@
 #include <halm/platform/lpc/serial.h>
 #include <halm/platform/lpc/spi.h>
 #include <halm/platform/lpc/spi_dma.h>
+#include <halm/platform/lpc/wdt.h>
 #include <string.h>
 /*----------------------------------------------------------------------------*/
 #define ENABLE_SPI_DMA
@@ -137,6 +138,11 @@ static const struct SpiConfig spiConfig[] = {
     .mode = 3
 };
 #endif
+
+static const struct WdtConfig wdtConfig = {
+    .period = 2000,
+    .source = WDT_CLOCK_PCLK
+};
 /*----------------------------------------------------------------------------*/
 static const struct ExternalOscConfig extOscConfig = {
     .frequency = 12000000
@@ -221,6 +227,11 @@ struct Interface *boardMakeSPI(void)
 #else
   return init(Spi, &spiConfig);
 #endif
+}
+/*----------------------------------------------------------------------------*/
+struct Watchdog *boardMakeWatchdog(void)
+{
+  return init(Wdt, &wdtConfig);
 }
 /*----------------------------------------------------------------------------*/
 bool boardSetupAnalogPackage(struct AnalogPackage *package)

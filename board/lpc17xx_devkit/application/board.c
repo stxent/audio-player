@@ -45,6 +45,19 @@ void appBoardInit(struct Board *board)
 {
   boardSetupClock();
 
+#ifdef ENABLE_WDT
+  /* Enable watchdog prior to all other peripherals */
+  board->system.watchdog = boardMakeWatchdog();
+#else
+  board->system.watchdog = NULL;
+#endif
+
+#ifdef ENABLE_DBG
+  board->system.serial = boardMakeSerial();
+#else
+  board->system.serial = NULL;
+#endif
+
   /* Initialize Work Queue */
   WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
   assert(WQ_DEFAULT != NULL);
@@ -57,7 +70,6 @@ void appBoardInit(struct Board *board)
   pinOutput(board->indication.green, false);
   board->indication.red = pinInit(BOARD_LED_R_PIN);
   pinOutput(board->indication.red, false);
-  board->indication.serial = boardMakeSerial();
 
   boardSetupAnalogPackage(&board->analogPackage);
   boardSetupButtonPackage(&board->buttonPackage);
