@@ -18,7 +18,7 @@ const struct InterfaceClass * const InterfaceProxy =
     &(const struct InterfaceClass){
     .size = sizeof(struct InterfaceProxy),
     .init = interfaceInit,
-    .deinit = 0, /* Use default destructor */
+    .deinit = NULL, /* Use default destructor */
 
     .setCallback = interfaceSetCallback,
     .getParam = interfaceGetParam,

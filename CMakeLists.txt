@@ -1,10 +1,10 @@
 # Copyright (C) 2022 xent
 # Project is distributed under the terms of the GNU General Public License v3.0
 
-project(AudioPlayer C)
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.21)
 cmake_policy(SET CMP0054 NEW)
 cmake_policy(SET CMP0069 NEW)
+project(AudioPlayer C)
 
 option(ENABLE_MP3 "Enable MP3 support." ON)
 option(USE_DBG "Enable debug messages." OFF)
@@ -15,7 +15,7 @@ option(USE_WDT "Enable watchdog timer." OFF)
 # Default compiler flags
 set(FLAGS_DEFAULT "-pedantic -Wall -Wextra -Wshadow")
 set(FLAGS_PROJECT "-fdata-sections -ffunction-sections")
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} ${FLAGS_DEFAULT}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS_INIT} ${FLAGS_PROJECT} ${FLAGS_CPU}")

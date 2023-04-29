@@ -118,7 +118,7 @@ static void onMountTimerEvent(void *argument)
 {
   struct Board * const board = argument;
 
-  if (!board->fs.handle)
+  if (board->fs.handle == NULL)
     wqAdd(WQ_DEFAULT, mountTask, board);
 }
 /*----------------------------------------------------------------------------*/
@@ -164,7 +164,7 @@ static void mountTask(void *argument)
 {
   struct Board * const board = argument;
 
-  if (!board->fs.handle)
+  if (board->fs.handle == NULL)
   {
     const struct MMCSDConfig cardConfig = {
         .interface = board->memory.sdmmc,
@@ -174,14 +174,14 @@ static void mountTask(void *argument)
 
     if (board->memory.card)
     {
-      ifSetParam(board->memory.card, IF_BLOCKING, 0);
+      ifSetParam(board->memory.card, IF_BLOCKING, NULL);
 
       struct InterfaceProxyConfig wrapperConfig = {
           .pipe = board->memory.card
       };
       board->memory.wrapper = init(InterfaceProxy, &wrapperConfig);
 
-      if (board->memory.wrapper)
+      if (board->memory.wrapper != NULL)
       {
         struct PartitionDescriptor partition;
 
@@ -195,22 +195,22 @@ static void mountTask(void *argument)
         };
         board->fs.handle = init(FatHandle, &config);
 
-        if (board->fs.handle)
+        if (board->fs.handle != NULL)
         {
           onCardMounted(board);
         }
         else
         {
           deinit(board->memory.wrapper);
-          board->memory.wrapper = 0;
+          board->memory.wrapper = NULL;
           deinit(board->memory.card);
-          board->memory.card = 0;
+          board->memory.card = NULL;
         }
       }
       else
       {
         deinit(board->memory.card);
-        board->memory.card = 0;
+        board->memory.card = NULL;
       }
     }
   }
@@ -277,14 +277,14 @@ static void unmountTask(void *argument)
 {
   struct Board * const board = argument;
 
-  if (board->fs.handle)
+  if (board->fs.handle != NULL)
   {
     deinit(board->fs.handle);
-    board->fs.handle = 0;
+    board->fs.handle = NULL;
     deinit(board->memory.wrapper);
-    board->memory.wrapper = 0;
+    board->memory.wrapper = NULL;
     deinit(board->memory.card);
-    board->memory.card = 0;
+    board->memory.card = NULL;
 
     onCardUnmounted(board);
   }

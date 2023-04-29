@@ -44,12 +44,12 @@ void appBoardInit(struct Board *board)
   board->codec.i2c = boardMakeI2C();
   board->codec.codec = boardMakeCodec(board->codec.i2c);
 
-  board->fs.handle = 0;
+  board->fs.handle = NULL;
   board->fs.timer = boardMakeMountTimer();
 
-  board->memory.card = 0;
+  board->memory.card = NULL;
   board->memory.sdmmc = boardMakeSDMMC();
-  board->memory.wrapper = 0;
+  board->memory.wrapper = NULL;
 
   board->event.volume = false;
 
@@ -60,7 +60,7 @@ void appBoardInit(struct Board *board)
   /* Init player instance */
   playerInit(&board->player, board->audio.rx, board->audio.tx,
       I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH,
-      rxBuffers, txBuffers, 0);
+      rxBuffers, txBuffers, NULL);
 }
 /*----------------------------------------------------------------------------*/
 int appBoardStart(struct Board *board __attribute__((unused)))

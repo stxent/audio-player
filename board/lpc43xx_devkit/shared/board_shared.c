@@ -152,7 +152,7 @@ struct Entity *boardMakeCodec(struct Interface *i2c)
   };
   struct TLV320AIC3x * const codec = init(TLV320AIC3x, &codecConfig);
 
-  if (codec)
+  if (codec != NULL)
   {
     aic3xEnablePath(codec, AIC3X_LINE_IN);
     aic3xEnablePath(codec, AIC3X_LINE_OUT);
@@ -193,10 +193,10 @@ struct Interface *boardMakeSerial(void)
 /*----------------------------------------------------------------------------*/
 bool boardSetupAnalogPackage(struct AnalogPackage *package)
 {
-  package->timer = 0;
+  package->timer = NULL;
 
   package->adc = init(AdcDma, &adcConfig);
-  if (!package->adc)
+  if (package->adc == NULL)
     return false;
 
   /*
@@ -204,7 +204,7 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
   * than that of the hardware events for ADC.
   */
   package->timer = init(GpTimer, &adcTimerConfig);
-  if (!package->timer)
+  if (package->timer == NULL)
     return false;
 
   package->value = 0;
@@ -213,14 +213,14 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
 /*----------------------------------------------------------------------------*/
 bool boardSetupButtonPackage(struct ButtonPackage *package)
 {
-  package->timer = 0;
+  package->timer = NULL;
 
   package->buttons = init(SimpleGpioBus, &busConfig);
-  if (!package->buttons)
+  if (package->buttons == NULL)
     return false;
 
   package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
-  if (!package->timer)
+  if (package->timer == NULL)
     return false;
 
   memset(package->debounce, 0, sizeof(package->debounce));

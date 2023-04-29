@@ -47,9 +47,9 @@ void appBoardInit(struct Board *board)
 
   /* Initialize Work Queue */
   WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
-  assert(WQ_DEFAULT);
+  assert(WQ_DEFAULT != NULL);
   WQ_LP = init(WorkQueueIrq, &workQueueIrqConfig);
-  assert(WQ_LP);
+  assert(WQ_LP != NULL);
 
   board->indication.blue = pinInit(BOARD_LED_B_PIN);
   pinOutput(board->indication.blue, false);
@@ -69,16 +69,16 @@ void appBoardInit(struct Board *board)
   board->codec.i2c = boardMakeI2C();
   board->codec.codec = boardMakeCodec(board->codec.i2c);
 
-  board->fs.handle = 0;
+  board->fs.handle = NULL;
   board->fs.timer = boardMakeMountTimer();
 
   board->memory.timer = boardMakeMemoryTimer();
   timerSetOverflow(board->memory.timer, 200); /* 5 kHz event rate */
 
-  board->memory.card = 0;
+  board->memory.card = NULL;
   board->memory.spi = boardMakeSPI();
   board->memory.sdio = boardMakeSDIO(board->memory.spi, board->memory.timer);
-  board->memory.wrapper = 0;
+  board->memory.wrapper = NULL;
 
   board->event.seeded = false;
   board->event.volume = false;

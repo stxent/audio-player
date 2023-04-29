@@ -15,7 +15,7 @@ bool partitionReadHeader(struct Interface *interface, uint64_t offset,
   uint8_t buffer[SECTOR_SIZE];
   bool res = true;
 
-  ifSetParam(interface, IF_ACQUIRE, 0);
+  ifSetParam(interface, IF_ACQUIRE, NULL);
   if (ifSetParam(interface, IF_POSITION_64, &offset) == E_OK)
   {
     if (ifRead(interface, buffer, sizeof(buffer)) != sizeof(buffer))
@@ -23,7 +23,7 @@ bool partitionReadHeader(struct Interface *interface, uint64_t offset,
   }
   else
     res = false;
-  ifSetParam(interface, IF_RELEASE, 0);
+  ifSetParam(interface, IF_RELEASE, NULL);
 
   if (!res)
     return false;
