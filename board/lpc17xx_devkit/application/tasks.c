@@ -90,7 +90,7 @@ static void onCardMounted(void *argument)
   size_t count;
   char text[64];
 
-  count = sprintf(text, "card mounted, tracks %lu\r\n",
+  count = sprintf(text, "Card mounted, tracks %lu\r\n",
       (unsigned long)playerGetTrackCount(&board->player));
   ifWrite(board->system.serial, text, count);
 #endif
@@ -189,7 +189,7 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
   size_t total = playerGetTrackCount(&board->player);
   char text[64];
 
-  count = sprintf(text, "player state %s track %lu/%lu\r\n",
+  count = sprintf(text, "Player state %s track %lu/%lu\r\n",
       STATE_NAMES[state],
       (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
       (unsigned long)total
@@ -285,7 +285,7 @@ static void seedRandomTask(void *argument)
   size_t count;
   char text[64];
 
-  count = sprintf(text, "seed %lu\r\n", (unsigned long)seed);
+  count = sprintf(text, "Seed %lu\r\n", (unsigned long)seed);
   ifWrite(board->system.serial, text, count);
 #endif
 }
@@ -311,7 +311,8 @@ static void startupTask(void *argument)
       timerGetFrequency(board->fs.timer));
   timerEnable(board->fs.timer);
 
-  /* 2 * 10 Hz ADC trigger rate, start ADC sampling */
+  /* 2 * 100 Hz ADC trigger rate, start ADC sampling */
+  ifSetParam(board->analogPackage.adc, IF_ENABLE, NULL);
   timerSetOverflow(board->analogPackage.timer,
       timerGetFrequency(board->analogPackage.timer) / 200);
   timerEnable(board->analogPackage.timer);
@@ -383,7 +384,7 @@ static void debugInfoTask(void *argument)
   size_t count;
   char text[64];
 
-  count = sprintf(text, "heap %u ticks %u cpu %u%%\r\n", used, loops, load);
+  count = sprintf(text, "Heap %u ticks %u cpu %u%%\r\n", used, loops, load);
   ifWrite(board->system.serial, text, count);
 }
 #endif

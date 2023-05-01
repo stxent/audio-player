@@ -31,6 +31,7 @@ static void onAudioDataSent(void *, struct StreamRequest *,
     enum StreamRequestStatus);
 
 static bool fetchNextChunkWAV(struct Player *, uint8_t *, size_t, size_t *);
+static bool isDataAvailable(struct FsNode *);
 static bool isFileSupported(const char *);
 static bool isReservedName(const char *);
 static void mockControlCallback(void *, uint32_t, uint8_t);
@@ -273,6 +274,11 @@ static bool fetchNextChunkWAV(struct Player *player, uint8_t *buffer,
   }
   else
     return false;
+}
+/*----------------------------------------------------------------------------*/
+static bool isDataAvailable(struct FsNode *node)
+{
+  return fsNodeRead(node, FS_NODE_DATA, 0, NULL, 0, NULL) == E_OK;
 }
 /*----------------------------------------------------------------------------*/
 static bool isFileSupported(const char *name)
@@ -906,16 +912,17 @@ static void scanNodeDescendants(struct Player *player, struct FsNode *root,
       if (res == E_OK && !isReservedName(name.data))
       {
         const bool isAudioFile = isFileSupported(name.data);
+        const bool isDataFile = isDataAvailable(child);
 
         fsJoinPaths(path.data, base, name.data);
 
-        if (level < MAX_LEVEL && !isAudioFile)
+        if (level < MAX_LEVEL && !isDataFile)
         {
           /* Attention to stack size: recursive call */
           scanNodeDescendants(player, child, path.data, level + 1);
         }
 
-        if (isAudioFile)
+        if (isDataFile && isAudioFile)
         {
           FsLength length;
 

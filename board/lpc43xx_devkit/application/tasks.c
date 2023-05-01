@@ -255,9 +255,10 @@ static void startupTask(void *argument)
       timerGetFrequency(board->fs.timer));
   timerEnable(board->fs.timer);
 
-  /* 2 * 10 Hz ADC trigger rate, start ADC sampling */
+  /* 2 * 100 Hz ADC trigger rate, start ADC sampling */
+  ifSetParam(board->analogPackage.adc, IF_ENABLE, NULL);
   timerSetOverflow(board->analogPackage.timer,
-      timerGetFrequency(board->analogPackage.timer) / 20);
+      timerGetFrequency(board->analogPackage.timer) / 200);
   timerEnable(board->analogPackage.timer);
 
 #ifdef ENABLE_DBG
