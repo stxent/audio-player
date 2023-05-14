@@ -5,7 +5,7 @@
  */
 
 #include "board_shared.h"
-#include "tlv320aic3x.h"
+#include <dpm/audio/tlv320aic3x.h>
 #include <dpm/button.h>
 #include <halm/core/cortex/systick.h>
 #include <halm/gpio_bus.h>
@@ -17,10 +17,12 @@
 #include <halm/platform/lpc/rit.h>
 #include <halm/platform/lpc/sdmmc.h>
 #include <halm/platform/lpc/serial.h>
+#include <halm/platform/lpc/wdt.h>
 #include <string.h>
 /*----------------------------------------------------------------------------*/
 #define PRI_TIMER_DBG 2
 
+#define PRI_TIMER_I2C 1
 #define PRI_I2C       1
 #define PRI_I2S       1
 #define PRI_SDMMC     1
@@ -57,6 +59,12 @@ static const struct GpTimerConfig adcTimerConfig = {
     .frequency = 1000000,
     .event = GPTIMER_MATCH3,
     .channel = 3
+};
+
+static const struct GpTimerConfig codecTimerConfig = {
+    .frequency = 1000000,
+    .priority = PRI_TIMER_I2C,
+    .channel = 2
 };
 
 static const struct GpTimerConfig loadTimerConfig = {
@@ -113,6 +121,10 @@ static const struct SdmmcConfig sdmmcConfig = {
     .dat3 = PIN(PORT_1, 12),
     .priority = PRI_SDMMC
 };
+
+static const struct WdtConfig wdtConfig = {
+    .period = 2000
+};
 /*----------------------------------------------------------------------------*/
 static const struct GenericClockConfig initialClockConfig = {
     .source = CLOCK_INTERNAL
@@ -142,23 +154,29 @@ static const struct PllConfig sysPllConfig = {
     .multiplier = 17
 };
 /*----------------------------------------------------------------------------*/
-struct Entity *boardMakeCodec(struct Interface *i2c)
+struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
 {
   const struct TLV320AIC3xConfig codecConfig = {
-      .interface = i2c,
+      .bus = i2c,
+      .timer = timer,
       .address = 0,
-      .rate = i2sConfig.rate,
-      .reset = 0
+      .rate = 0,
+      .reset = BOARD_CODEC_RESET_PIN
   };
   struct TLV320AIC3x * const codec = init(TLV320AIC3x, &codecConfig);
 
   if (codec != NULL)
   {
-    aic3xEnablePath(codec, AIC3X_LINE_IN);
-    aic3xEnablePath(codec, AIC3X_LINE_OUT);
+    aic3xSetUpdateWorkQueue(codec, WQ_LP);
+    aic3xReset(codec, 44100, AIC3X_NONE, 0, false, AIC3X_LINE_OUT_DIFF, 0);
   }
 
   return (struct Entity *)codec;
+}
+/*----------------------------------------------------------------------------*/
+struct Timer *boardMakeCodecTimer(void)
+{
+  return init(GpTimer, &codecTimerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeLoadTimer(void)
@@ -189,6 +207,11 @@ struct Interface *boardMakeSDMMC(void)
 struct Interface *boardMakeSerial(void)
 {
   return init(Serial, &serialConfig);
+}
+/*----------------------------------------------------------------------------*/
+struct Watchdog *boardMakeWatchdog(void)
+{
+  return init(Wdt, &wdtConfig);
 }
 /*----------------------------------------------------------------------------*/
 bool boardSetupAnalogPackage(struct AnalogPackage *package)
@@ -261,22 +284,10 @@ bool boardSetupClock(void)
 /*----------------------------------------------------------------------------*/
 void codecSetRate(struct Entity *codec, uint32_t value)
 {
-  // TODO
-  (void)codec;
-  (void)value;
+  aic3xSetRate((struct TLV320AIC3x *)codec, value);
 }
 /*----------------------------------------------------------------------------*/
 void codecSetVolume(struct Entity *codec, uint8_t value)
 {
-  int gain;
-
-  if (value > 100)
-    value = 100;
-
-  if (value > 0)
-    gain = ((100 - value) * 60) / 100;
-  else
-    gain = 127; /* Mute */
-
-  aic3xSetGain((struct TLV320AIC3x *)codec, AIC3X_LINE_OUT, gain);
+  aic3xSetOutputGain((struct TLV320AIC3x *)codec, value);
 }

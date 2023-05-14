@@ -31,6 +31,7 @@ struct Board
   {
     struct Entity *codec;
     struct Interface *i2c;
+    struct Timer *timer;
   } codec;
 
   struct
@@ -57,6 +58,13 @@ struct Board
 
   struct
   {
+    struct Interface *serial;
+    struct Watchdog *watchdog;
+  } system;
+
+  struct
+  {
+    bool mount;
     bool volume;
   } event;
 

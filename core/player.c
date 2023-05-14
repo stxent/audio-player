@@ -598,17 +598,9 @@ static void shuffleTracks(PathArray *tracks, int (*random)(void))
 {
   const size_t count = pathArraySize(tracks);
 
-  for (size_t index = 0; index < count; ++index)
+  for (size_t i = count - 1; i; --i)
   {
-    const size_t i = random() % count;
-    size_t j;
-
-    do
-    {
-      j = random() % count;
-    }
-    while (i == j);
-
+    const size_t j = random() % (i + 1);
     FilePath swap;
 
     memcpy(&swap, pathArrayAt(tracks, i), sizeof(FilePath));

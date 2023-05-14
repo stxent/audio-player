@@ -65,7 +65,8 @@ struct ButtonPackage
 /*----------------------------------------------------------------------------*/
 BEGIN_DECLS
 
-struct Entity *boardMakeCodec(struct Interface *);
+struct Entity *boardMakeCodec(struct Interface *, struct Timer *);
+struct Timer *boardMakeCodecTimer(void);
 struct Timer *boardMakeLoadTimer(void);
 struct Timer *boardMakeMemoryTimer(void);
 struct Timer *boardMakeMountTimer(void);
@@ -82,6 +83,7 @@ bool boardSetupClock(void);
 
 void codecSetRate(struct Entity *, uint32_t);
 void codecSetVolume(struct Entity *, uint8_t);
+void codecSwitchPath(struct Entity *);
 
 END_DECLS
 /*----------------------------------------------------------------------------*/

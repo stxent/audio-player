@@ -79,6 +79,15 @@ static void onCardMounted(void *argument)
   pinSet(board->indication.green);
 
   playerScanFiles(&board->player, board->fs.handle);
+
+#ifdef ENABLE_DBG
+  size_t count;
+  char text[64];
+
+  count = sprintf(text, "Card mounted, tracks %lu\r\n",
+      (unsigned long)playerGetTrackCount(&board->player));
+  ifWrite(board->system.serial, text, count);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 static void onCardUnmounted(void *argument)
@@ -118,8 +127,11 @@ static void onMountTimerEvent(void *argument)
 {
   struct Board * const board = argument;
 
-  if (board->fs.handle == NULL)
-    wqAdd(WQ_DEFAULT, mountTask, board);
+  if (!board->event.mount && !board->fs.handle)
+  {
+    if (wqAdd(WQ_DEFAULT, mountTask, board) == E_OK)
+      board->event.mount = true;
+  }
 }
 /*----------------------------------------------------------------------------*/
 static void onPlayerFormatChanged(void *argument, uint32_t rate,
@@ -158,6 +170,26 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       wqAdd(WQ_DEFAULT, unmountTask, board);
       break;
   }
+
+#ifdef ENABLE_DBG
+  static const char *STATE_NAMES[] = {
+      "PLAYING",
+      "PAUSED",
+      "STOPPED",
+      "ERROR"
+  };
+  size_t count;
+  size_t index = playerGetCurrentTrack(&board->player);
+  size_t total = playerGetTrackCount(&board->player);
+  char text[64];
+
+  count = sprintf(text, "Player state %s track %lu/%lu\r\n",
+      STATE_NAMES[state],
+      (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
+      (unsigned long)total
+  );
+  ifWrite(board->system.serial, text, count);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 static void mountTask(void *argument)
@@ -318,8 +350,8 @@ static void debugInfoTask(void *argument)
   size_t count;
   char text[64];
 
-  count = sprintf(text, "heap %u ticks %u cpu %u%%\r\n", used, loops, load);
-  ifWrite(board->indication.serial, text, count);
+  count = sprintf(text, "Heap %u ticks %u cpu %u%%\r\n", used, loops, load);
+  ifWrite(board->system.serial, text, count);
 }
 #endif
 /*----------------------------------------------------------------------------*/

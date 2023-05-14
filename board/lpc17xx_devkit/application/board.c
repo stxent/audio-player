@@ -25,7 +25,7 @@ static const struct WorkQueueConfig workQueueConfig = {
 };
 
 static const struct WorkQueueIrqConfig workQueueIrqConfig = {
-    .size = 1,
+    .size = 2,
     .irq = SPI_IRQ,
     .priority = 0
 };
@@ -79,7 +79,8 @@ void appBoardInit(struct Board *board)
   board->audio.tx = i2sDmaGetOutput((struct I2SDma *)board->audio.i2s);
 
   board->codec.i2c = boardMakeI2C();
-  board->codec.codec = boardMakeCodec(board->codec.i2c);
+  board->codec.timer = boardMakeCodecTimer();
+  board->codec.codec = boardMakeCodec(board->codec.i2c, board->codec.timer);
 
   board->fs.handle = NULL;
   board->fs.timer = boardMakeMountTimer();

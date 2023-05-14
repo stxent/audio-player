@@ -353,7 +353,7 @@ static void volumeChangedTask(void *argument)
 
   struct Board * const board = argument;
   const uint16_t average = afValue(&board->analogPackage.filter);
-  const int current = (uint8_t)(((int)average * 100) / 4096);
+  const int current = average / 16;
   const int previous = board->analogPackage.value;
 
   board->event.volume = false;

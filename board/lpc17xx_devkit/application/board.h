@@ -31,6 +31,7 @@ struct Board
   {
     struct Entity *codec;
     struct Interface *i2c;
+    struct Timer *timer;
   } codec;
 
   struct
