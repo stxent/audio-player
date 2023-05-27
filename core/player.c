@@ -720,7 +720,7 @@ static inline void stopPlayingTask(void *argument)
 /*----------------------------------------------------------------------------*/
 bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
     size_t buffers, size_t rxLength, size_t txLength,
-    void *rxArena, void *txArena, int (*random)(void))
+    void *rxArena, void *txArena, size_t tracks, int (*random)(void))
 {
   if (rxLength > txLength)
     return false;
@@ -733,7 +733,7 @@ bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
   if (player->txReq == NULL)
     goto free_rx;
 
-  if (!pathArrayInit(&player->tracks, TRACK_COUNT))
+  if (!pathArrayInit(&player->tracks, tracks))
     goto free_tx;
 
 #ifdef CONFIG_ENABLE_MP3

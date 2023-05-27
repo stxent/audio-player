@@ -6,7 +6,6 @@
 
 #include "board_shared.h"
 #include <halm/generic/work_queue.h>
-#include <halm/pin.h>
 #include <halm/timer.h>
 #include <xcore/interface.h>
 #include <assert.h>
@@ -52,16 +51,16 @@ int main(void)
   boardSetupClock();
 
   struct Interface * const serial = boardMakeSerial();
-  assert(serial);
+  assert(serial != NULL);
 
   struct Timer * const baseTimer = boardMakeMountTimer();
-  assert(baseTimer);
+  assert(baseTimer != NULL);
   timerSetCallback(baseTimer, onFlushTimerOverflow, serial);
   timerSetOverflow(baseTimer, timerGetFrequency(baseTimer) * SAMPLE_COUNT);
 
   struct Timer * const loadTimer = boardMakeLoadTimer();
-  assert(loadTimer);
-  timerSetCallback(loadTimer, onLoadTimerOverflow, 0);
+  assert(loadTimer != NULL);
+  timerSetCallback(loadTimer, onLoadTimerOverflow, NULL);
   timerSetOverflow(loadTimer, timerGetFrequency(loadTimer));
 
   timerEnable(loadTimer);
@@ -69,7 +68,7 @@ int main(void)
 
   /* Initialize Work Queue */
   WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
-  assert(WQ_DEFAULT);
+  assert(WQ_DEFAULT != NULL);
 
   wqStart(WQ_DEFAULT);
   return 0;

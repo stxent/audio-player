@@ -9,6 +9,7 @@
 /*----------------------------------------------------------------------------*/
 #include "board_shared.h"
 #include "player.h"
+#include <dpm/bus_handler.h>
 #include <halm/pin.h>
 /*----------------------------------------------------------------------------*/
 struct FsHandle;
@@ -18,6 +19,7 @@ struct Board
 {
   struct AnalogPackage analogPackage;
   struct ButtonPackage buttonPackage;
+  struct CodecPackage codecPackage;
   struct Player player;
 
   struct
@@ -26,13 +28,6 @@ struct Board
     struct Stream *rx;
     struct Stream *tx;
   } audio;
-
-  struct
-  {
-    struct Entity *codec;
-    struct Interface *i2c;
-    struct Timer *timer;
-  } codec;
 
   struct
   {
@@ -45,7 +40,8 @@ struct Board
     struct Pin blue;
     struct Pin green;
     struct Pin red;
-    struct Pin white;
+    struct Pin whiteA;
+    struct Pin whiteB;
     struct Interface *serial;
   } indication;
 
@@ -60,10 +56,14 @@ struct Board
   {
     struct Interface *serial;
     struct Watchdog *watchdog;
+    struct Pin power;
   } system;
 
   struct
   {
+    uint8_t ampRetries;
+    uint8_t codecRetries;
+
     bool mount;
     bool volume;
   } event;

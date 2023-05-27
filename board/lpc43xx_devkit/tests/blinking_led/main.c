@@ -5,42 +5,25 @@
  */
 
 #include "board_shared.h"
-#include <halm/pin.h>
-#include <halm/platform/lpc/clocking.h>
-#include <halm/platform/lpc/gptimer.h>
+#include <halm/timer.h>
 #include <assert.h>
-/*----------------------------------------------------------------------------*/
-static const struct GpTimerConfig timerConfig = {
-    .frequency = 1000,
-    .channel = 0
-};
-
-static const struct GenericClockConfig mainClockConfig = {
-    .source = CLOCK_INTERNAL
-};
 /*----------------------------------------------------------------------------*/
 static void onTimerOverflow(void *argument)
 {
   *(bool *)argument = true;
 }
 /*----------------------------------------------------------------------------*/
-static void setupClock(void)
-{
-  clockEnable(MainClock, &mainClockConfig);
-}
-/*----------------------------------------------------------------------------*/
 int main(void)
 {
-  setupClock();
+  boardSetupClock();
+  bool event = false;
 
   const struct Pin led = pinInit(BOARD_LED_R_PIN);
   pinOutput(led, true);
 
-  struct Timer * const timer = init(GpTimer, &timerConfig);
-  assert(timer);
-  timerSetOverflow(timer, 500);
-
-  bool event = false;
+  struct Timer * const timer = boardMakeMountTimer();
+  assert(timer != NULL);
+  timerSetOverflow(timer, timerGetFrequency(timer) / 2);
   timerSetCallback(timer, onTimerOverflow, &event);
   timerEnable(timer);
 

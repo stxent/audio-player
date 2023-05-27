@@ -8,29 +8,35 @@
 #define BOARD_LPC43XX_DEVKIT_SHARED_BOARD_SHARED_H_
 /*----------------------------------------------------------------------------*/
 #include "analog_filter.h"
+#include <dpm/bus_handler.h>
 #include <halm/generic/work_queue_irq.h>
 #include <halm/pin.h>
 #include <xcore/helpers.h>
 #include <stdbool.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
+#define BOARD_BUTTON_1_PIN    PIN(PORT_7, 7)  /* Previous */
+#define BOARD_BUTTON_2_PIN    PIN(PORT_7, 5)  /* Stop */
+#define BOARD_BUTTON_3_PIN    PIN(PORT_7, 0)  /* Play/Pause */
+#define BOARD_BUTTON_4_PIN    PIN(PORT_2, 13) /* Next */
+#define BOARD_CODEC_RESET_PIN PIN(PORT_4, 1)
+#define BOARD_LED_R_PIN       PIN(PORT_5, 7)
+#define BOARD_LED_G_PIN       PIN(PORT_5, 5)
+#define BOARD_LED_B_PIN       PIN(PORT_4, 0)
+#define BOARD_LED_WA_PIN      PIN(PORT_6, 8)
+#define BOARD_LED_WB_PIN      PIN(PORT_6, 7)
+#define BOARD_POWER_PIN       PIN(PORT_1, 8)
+
+#define TRACK_COUNT           128
+/*----------------------------------------------------------------------------*/
+DEFINE_WQ_IRQ(WQ_LP)
+
 struct Entity;
 struct GpioBus;
 struct Interface;
+struct SoftwareTimerFactory;
 struct Timer;
 struct Watchdog;
-/*----------------------------------------------------------------------------*/
-#define BOARD_BUTTON_1_PIN    PIN(PORT_B, 5)
-#define BOARD_BUTTON_2_PIN    PIN(PORT_3, 5)
-#define BOARD_BUTTON_3_PIN    PIN(PORT_B, 3)
-#define BOARD_BUTTON_4_PIN    PIN(PORT_7, 3)
-#define BOARD_CODEC_RESET_PIN PIN(PORT_4, 1)
-#define BOARD_LED_R_PIN       PIN(PORT_7, 7)
-#define BOARD_LED_G_PIN       PIN(PORT_C, 11)
-#define BOARD_LED_B_PIN       PIN(PORT_9, 3)
-#define BOARD_LED_W_PIN       PIN(PORT_9, 4)
-
-DEFINE_WQ_IRQ(WQ_LP)
 
 struct AnalogPackage
 {
@@ -45,10 +51,25 @@ struct ButtonPackage
   struct Timer *timer;
   uint8_t debounce[4];
 };
+
+struct CodecPackage
+{
+  struct SoftwareTimerFactory *factory;
+  struct Timer *baseTimer;
+
+  struct Entity *amp;
+  struct Timer *ampTimer;
+  struct Entity *codec;
+  struct Timer *codecTimer;
+  struct Interface *i2c;
+
+  struct BusHandler handler;
+};
 /*----------------------------------------------------------------------------*/
 BEGIN_DECLS
 
-struct Entity *boardMakeCodec(struct Interface *, struct Timer *timer);
+struct Entity *boardMakeAmp(struct Interface *, struct Timer *);
+struct Entity *boardMakeCodec(struct Interface *, struct Timer *);
 struct Timer *boardMakeCodecTimer(void);
 struct Timer *boardMakeLoadTimer(void);
 struct Timer *boardMakeMountTimer(void);
@@ -60,10 +81,8 @@ struct Watchdog *boardMakeWatchdog(void);
 
 bool boardSetupAnalogPackage(struct AnalogPackage *);
 bool boardSetupButtonPackage(struct ButtonPackage *);
+bool boardSetupCodecPackage(struct CodecPackage *);
 bool boardSetupClock(void);
-
-void codecSetRate(struct Entity *, uint32_t);
-void codecSetVolume(struct Entity *, uint8_t);
 
 END_DECLS
 /*----------------------------------------------------------------------------*/

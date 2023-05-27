@@ -4,10 +4,13 @@
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
 
+#include "amplifier.h"
 #include "board_shared.h"
 #include <dpm/audio/tlv320aic3x.h>
+#include <dpm/bus_handler.h>
 #include <dpm/button.h>
 #include <halm/core/cortex/systick.h>
+#include <halm/generic/software_timer.h>
 #include <halm/gpio_bus.h>
 #include <halm/platform/lpc/adc_dma.h>
 #include <halm/platform/lpc/clocking.h>
@@ -32,7 +35,7 @@
 #define PRI_TIMER_SYS 0
 /*----------------------------------------------------------------------------*/
 static const PinNumber adcPinArray[] = {
-    PIN(PORT_ADC, 5),
+    PIN(PORT_ADC, 0),
     0
 };
 
@@ -89,6 +92,7 @@ static const struct I2SDmaConfig i2sConfig = {
         .sda = PIN(PORT_7, 2),
         .sck = PIN(PORT_4, 7),
         .ws = PIN(PORT_7, 1),
+        .mclk = PIN(PORT_CLK, 2),
         .dma = 0
     },
     .rx = {
@@ -123,7 +127,7 @@ static const struct SdmmcConfig sdmmcConfig = {
 };
 
 static const struct WdtConfig wdtConfig = {
-    .period = 2000
+    .period = 1000
 };
 /*----------------------------------------------------------------------------*/
 static const struct GenericClockConfig initialClockConfig = {
@@ -154,24 +158,30 @@ static const struct PllConfig sysPllConfig = {
     .multiplier = 17
 };
 /*----------------------------------------------------------------------------*/
+struct Entity *boardMakeAmp(struct Interface *i2c, struct Timer *timer)
+{
+  const struct AmplifierConfig ampConfig = {
+      .bus = i2c,
+      .timer = timer,
+      .address = 0x70,
+      .rate = 0
+  };
+
+  return init(Amplifier, &ampConfig);
+}
+/*----------------------------------------------------------------------------*/
 struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
 {
   const struct TLV320AIC3xConfig codecConfig = {
       .bus = i2c,
       .timer = timer,
-      .address = 0,
+      .address = 0x18,
       .rate = 0,
+      .prescaler = 0,
       .reset = BOARD_CODEC_RESET_PIN
   };
-  struct TLV320AIC3x * const codec = init(TLV320AIC3x, &codecConfig);
 
-  if (codec != NULL)
-  {
-    aic3xSetUpdateWorkQueue(codec, WQ_LP);
-    aic3xReset(codec, 44100, AIC3X_NONE, 0, false, AIC3X_LINE_OUT_DIFF, 0);
-  }
-
-  return (struct Entity *)codec;
+  return init(TLV320AIC3x, &codecConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeCodecTimer(void)
@@ -206,6 +216,7 @@ struct Interface *boardMakeSDMMC(void)
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeSerial(void)
 {
+  clockEnable(Uart1Clock, &mainClockConfig);
   return init(Serial, &serialConfig);
 }
 /*----------------------------------------------------------------------------*/
@@ -250,6 +261,60 @@ bool boardSetupButtonPackage(struct ButtonPackage *package)
   return true;
 }
 /*----------------------------------------------------------------------------*/
+bool boardSetupCodecPackage(struct CodecPackage *package)
+{
+  package->baseTimer = NULL;
+  package->factory = NULL;
+
+  package->ampTimer = NULL;
+  package->amp = NULL;
+  package->codecTimer = NULL;
+  package->codec = NULL;
+
+  package->i2c = boardMakeI2C();
+  if (package->i2c == NULL)
+    return false;
+
+  package->factory = 0;
+
+  package->baseTimer = boardMakeCodecTimer();
+  if (package->baseTimer == NULL)
+    return false;
+  timerSetOverflow(package->baseTimer,
+      timerGetFrequency(package->baseTimer) / 1000);
+
+  const struct SoftwareTimerFactoryConfig timerFactoryConfig = {
+      .timer = package->baseTimer
+  };
+  package->factory = init(SoftwareTimerFactory, &timerFactoryConfig);
+  if (package->factory == NULL)
+    return false;
+
+  package->ampTimer = softwareTimerCreate(package->factory);
+  if (package->ampTimer == NULL)
+    return false;
+  package->amp = boardMakeAmp(package->i2c, package->ampTimer);
+  if (package->amp == NULL)
+    return false;
+
+  package->codecTimer = softwareTimerCreate(package->factory);
+  if (package->codecTimer == NULL)
+    return false;
+  package->codec = boardMakeCodec(package->i2c, package->codecTimer);
+  if (package->codec == NULL)
+    return false;
+
+  bool ready = bhInit(&package->handler, 2, WQ_LP);
+
+  ready = ready && bhAttach(&package->handler, package->amp,
+      ampSetErrorCallback, ampSetUpdateCallback, ampUpdate);
+
+  ready = ready && bhAttach(&package->handler, package->codec,
+        codecSetErrorCallback, codecSetUpdateCallback, codecUpdate);
+
+  return ready;
+}
+/*----------------------------------------------------------------------------*/
 bool boardSetupClock(void)
 {
   clockEnable(MainClock, &initialClockConfig);
@@ -280,14 +345,4 @@ bool boardSetupClock(void)
   clockEnable(MainClock, &mainClockConfig);
 
   return true;
-}
-/*----------------------------------------------------------------------------*/
-void codecSetRate(struct Entity *codec, uint32_t value)
-{
-  aic3xSetRate((struct TLV320AIC3x *)codec, value);
-}
-/*----------------------------------------------------------------------------*/
-void codecSetVolume(struct Entity *codec, uint8_t value)
-{
-  aic3xSetOutputGain((struct TLV320AIC3x *)codec, value);
 }

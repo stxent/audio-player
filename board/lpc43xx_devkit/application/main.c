@@ -17,7 +17,11 @@ int main(void)
   invokeStartupTask(board);
 
 #ifdef ENABLE_DBG
-  board->debug.idle = 5099992; // 51 MHz
+  /*
+   * 20399986 for 204 MHz
+   *  5099992 for  51 MHz
+   */
+  board->debug.idle = 5099992;
 #endif
 
   return appBoardStart(board);

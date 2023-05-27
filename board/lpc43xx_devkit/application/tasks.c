@@ -4,18 +4,25 @@
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
 
+#include "amplifier.h"
 #include "board.h"
 #include "interface_proxy.h"
 #include "partitions.h"
 #include "player.h"
 #include "tasks.h"
+#include <dpm/audio/codec.h>
+#include <dpm/audio/tlv320aic3x.h>
 #include <halm/gpio_bus.h>
 #include <halm/generic/mmcsd.h>
 #include <halm/timer.h>
+#include <halm/watchdog.h>
 #include <halm/wq.h>
 #include <yaf/fat32.h>
 #include <stdio.h>
 /*----------------------------------------------------------------------------*/
+#define BUS_MAX_RETRIES 10
+/*----------------------------------------------------------------------------*/
+static void onBusError(void *, void *);
 static void onButtonCheckEvent(void *);
 static void onCardMounted(void *);
 static void onCardUnmounted(void *);
@@ -47,6 +54,51 @@ static const ButtonCallback BUTTON_TASKS[] = {
     playNextTask
 };
 /*----------------------------------------------------------------------------*/
+static void onBusError(void *argument, void *device)
+{
+  struct Board * const board = argument;
+
+#ifdef ENABLE_DBG
+  size_t count;
+  char text[64];
+
+  if (device == board->codecPackage.amp)
+  {
+    count = sprintf(text, "AMP bus error, retry %u\r\n",
+        (unsigned int)board->event.ampRetries);
+  }
+  else
+  {
+    count = sprintf(text, "DEC bus error, retry %u\r\n",
+        (unsigned int)board->event.codecRetries);
+  }
+
+  ifWrite(board->system.serial, text, count);
+#endif
+
+  if (device == board->codecPackage.amp)
+  {
+    if (board->event.ampRetries < BUS_MAX_RETRIES - 1)
+    {
+      ++board->event.ampRetries;
+      ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
+    }
+    else
+      pinReset(board->indication.whiteA);
+  }
+  else
+  {
+    if (board->event.codecRetries < BUS_MAX_RETRIES - 1)
+    {
+      ++board->event.codecRetries;
+      codecReset(board->codecPackage.codec, 44100,
+          AIC3X_NONE, AIC3X_LINE_OUT_DIFF);
+    }
+    else
+      pinReset(board->indication.whiteB);
+  }
+}
+/*----------------------------------------------------------------------------*/
 static void onButtonCheckEvent(void *argument)
 {
   static const uint8_t DEBOUNCE_THRESHOLD = 4;
@@ -66,9 +118,13 @@ static void onButtonCheckEvent(void *argument)
     }
     else
     {
-      board->buttonPackage.debounce[i] = 0;
+      if (board->buttonPackage.debounce[i] > 0)
+        --board->buttonPackage.debounce[i];
     }
   }
+
+  if (board->system.watchdog != NULL)
+    watchdogReload(board->system.watchdog);
 }
 /*----------------------------------------------------------------------------*/
 static void onCardMounted(void *argument)
@@ -110,7 +166,7 @@ static void onConversionCompleted(void *argument)
 
   ifRead(board->analogPackage.adc, &sample, sizeof(sample));
 
-  const int current = ((int)sample * 100) / 65535;
+  const int current = sample >> 8;
   const int previous = board->analogPackage.value;
 
   if (abs(current - previous) >= DELTA_THRESHOLD && !board->event.volume)
@@ -127,7 +183,7 @@ static void onMountTimerEvent(void *argument)
 {
   struct Board * const board = argument;
 
-  if (!board->event.mount && !board->fs.handle)
+  if (!board->event.mount && board->fs.handle == NULL)
   {
     if (wqAdd(WQ_DEFAULT, mountTask, board) == E_OK)
       board->event.mount = true;
@@ -140,7 +196,7 @@ static void onPlayerFormatChanged(void *argument, uint32_t rate,
   struct Board * const board = argument;
 
   ifSetParam(board->audio.i2s, IF_RATE, &rate);
-  codecSetRate(board->codec.codec, rate);
+  codecSetSampleRate(board->codecPackage.codec, rate);
 }
 /*----------------------------------------------------------------------------*/
 static void onPlayerStateChanged(void *argument, enum PlayerState state)
@@ -150,6 +206,7 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
   switch (state)
   {
     case PLAYER_PLAYING:
+      ampReset(board->codecPackage.amp, AMP_GAIN_MAX, true);
       pinReset(board->indication.blue);
       pinSet(board->indication.red);
       break;
@@ -160,11 +217,13 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       break;
 
     case PLAYER_STOPPED:
+      ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
       pinReset(board->indication.blue);
       pinReset(board->indication.red);
       break;
 
     case PLAYER_ERROR:
+      ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
       pinReset(board->indication.blue);
       pinReset(board->indication.red);
       wqAdd(WQ_DEFAULT, unmountTask, board);
@@ -204,7 +263,7 @@ static void mountTask(void *argument)
     };
     board->memory.card = init(MMCSD, &cardConfig);
 
-    if (board->memory.card)
+    if (board->memory.card != NULL)
     {
       ifSetParam(board->memory.card, IF_BLOCKING, NULL);
 
@@ -270,10 +329,11 @@ static void startupTask(void *argument)
 {
   struct Board * const board = argument;
 
-  ifSetCallback(board->analogPackage.adc, onConversionCompleted, board);
-
+  bhSetErrorCallback(&board->codecPackage.handler, onBusError, board);
   playerSetControlCallback(&board->player, onPlayerFormatChanged, board);
   playerSetStateCallback(&board->player, onPlayerStateChanged, board);
+
+  ifSetCallback(board->analogPackage.adc, onConversionCompleted, board);
 
   /* 100 Hz button check rate */
   timerSetCallback(board->buttonPackage.timer, onButtonCheckEvent, board);
@@ -293,11 +353,22 @@ static void startupTask(void *argument)
       timerGetFrequency(board->analogPackage.timer) / 200);
   timerEnable(board->analogPackage.timer);
 
+  /* Enable base timer for timer factory */
+  timerEnable(board->codecPackage.baseTimer);
+
 #ifdef ENABLE_DBG
   timerSetCallback(board->debug.timer, onLoadTimerOverflow, board);
   timerSetOverflow(board->debug.timer, timerGetFrequency(board->debug.timer));
   timerEnable(board->debug.timer);
 #endif
+
+  /* Enqueue power amplifier configuration */
+  ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
+  /* Enqueue audio codec configuration */
+  codecReset(board->codecPackage.codec, 44100, AIC3X_NONE, AIC3X_LINE_OUT_DIFF);
+
+  /* Enable SD card power */
+  pinSet(board->system.power);
 }
 /*----------------------------------------------------------------------------*/
 static void stopPlayingTask(void *argument)
@@ -328,7 +399,8 @@ static void volumeChangedTask(void *argument)
   struct Board * const board = argument;
 
   board->event.volume = false;
-  codecSetVolume(board->codec.codec, board->analogPackage.value);
+  codecSetOutputGain(board->codecPackage.codec, CHANNEL_BOTH,
+      board->analogPackage.value);
 }
 /*----------------------------------------------------------------------------*/
 #ifdef ENABLE_DBG

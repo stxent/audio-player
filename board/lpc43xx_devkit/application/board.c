@@ -27,65 +27,77 @@ static const struct WorkQueueIrqConfig workQueueIrqConfig = {
 /*----------------------------------------------------------------------------*/
 void appBoardInit(struct Board *board)
 {
-  boardSetupClock();
+  bool ready = boardSetupClock();
 
 #ifdef ENABLE_WDT
   /* Enable watchdog prior to all other peripherals */
   board->system.watchdog = boardMakeWatchdog();
+  assert(board->system.watchdog != NULL);
 #else
   board->system.watchdog = NULL;
 #endif
 
 #ifdef ENABLE_DBG
   board->system.serial = boardMakeSerial();
+  assert(board->system.serial != NULL);
 #else
   board->system.serial = NULL;
 #endif
 
   /* Initialize Work Queue */
   WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
-  assert(WQ_DEFAULT);
+  assert(WQ_DEFAULT != NULL);
   WQ_LP = init(WorkQueueIrq, &workQueueIrqConfig);
   assert(WQ_LP != NULL);
 
+  board->system.power = pinInit(BOARD_POWER_PIN);
+  pinOutput(board->system.power, false);
   board->indication.blue = pinInit(BOARD_LED_B_PIN);
   pinOutput(board->indication.blue, false);
   board->indication.green = pinInit(BOARD_LED_G_PIN);
   pinOutput(board->indication.green, false);
   board->indication.red = pinInit(BOARD_LED_R_PIN);
   pinOutput(board->indication.red, false);
-  board->indication.white = pinInit(BOARD_LED_W_PIN);
-  pinOutput(board->indication.white, false);
+  board->indication.whiteA = pinInit(BOARD_LED_WA_PIN);
+  pinOutput(board->indication.whiteA, true);
+  board->indication.whiteB = pinInit(BOARD_LED_WB_PIN);
+  pinOutput(board->indication.whiteB, true);
 
-  boardSetupAnalogPackage(&board->analogPackage);
-  boardSetupButtonPackage(&board->buttonPackage);
+  ready = ready && boardSetupAnalogPackage(&board->analogPackage);
+  ready = ready && boardSetupButtonPackage(&board->buttonPackage);
+  ready = ready && boardSetupCodecPackage(&board->codecPackage);
 
   board->audio.i2s = boardMakeI2S();
+  assert(board->audio.i2s != NULL);
   board->audio.rx = i2sDmaGetInput((struct I2SDma *)board->audio.i2s);
   board->audio.tx = i2sDmaGetOutput((struct I2SDma *)board->audio.i2s);
 
-  board->codec.i2c = boardMakeI2C();
-  board->codec.timer = boardMakeCodecTimer();
-  board->codec.codec = boardMakeCodec(board->codec.i2c, board->codec.timer);
-
   board->fs.handle = NULL;
   board->fs.timer = boardMakeMountTimer();
+  assert(board->fs.timer != NULL);
 
   board->memory.card = NULL;
-  board->memory.sdmmc = boardMakeSDMMC();
   board->memory.wrapper = NULL;
+  board->memory.sdmmc = boardMakeSDMMC();
+  assert(board->memory.sdmmc != NULL);
 
+  board->event.ampRetries = 0;
+  board->event.codecRetries = 0;
   board->event.mount = false;
   board->event.volume = false;
 
-  board->debug.timer = boardMakeLoadTimer();
   board->debug.idle = 0;
   board->debug.loops = 0;
+  board->debug.timer = boardMakeLoadTimer();
+  assert(board->debug.timer != NULL);
 
   /* Init player instance */
-  playerInit(&board->player, board->audio.rx, board->audio.tx,
+  ready = ready && playerInit(&board->player, board->audio.rx, board->audio.tx,
       I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH,
-      rxBuffers, txBuffers, NULL);
+      rxBuffers, txBuffers, TRACK_COUNT, NULL);
+
+  assert(ready);
+  (void)ready;
 }
 /*----------------------------------------------------------------------------*/
 int appBoardStart(struct Board *board __attribute__((unused)))

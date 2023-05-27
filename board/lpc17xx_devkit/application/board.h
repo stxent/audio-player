@@ -18,6 +18,7 @@ struct Board
 {
   struct AnalogPackage analogPackage;
   struct ButtonPackage buttonPackage;
+  struct CodecPackage codecPackage;
   struct Player player;
 
   struct
@@ -26,13 +27,6 @@ struct Board
     struct Stream *rx;
     struct Stream *tx;
   } audio;
-
-  struct
-  {
-    struct Entity *codec;
-    struct Interface *i2c;
-    struct Timer *timer;
-  } codec;
 
   struct
   {
@@ -60,10 +54,14 @@ struct Board
   {
     struct Interface *serial;
     struct Watchdog *watchdog;
+    struct Pin power;
   } system;
 
   struct
   {
+    uint8_t ampRetries;
+    uint8_t codecRetries;
+
     bool mount;
     bool seeded;
     bool volume;

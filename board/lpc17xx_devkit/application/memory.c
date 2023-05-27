@@ -9,12 +9,9 @@
 typedef uint8_t I2SRxBuffer[I2S_RX_BUFFER_LENGTH];
 typedef uint8_t I2STxBuffer[I2S_TX_BUFFER_LENGTH];
 /*----------------------------------------------------------------------------*/
-// #ifdef CONFIG_ENABLE_MP3
-// I2SRxBuffer rxBuffers = 0;
-// #else
-// /* Total: 16384 bytes */
+// TODO I2S RX
+// /* Total: 2048 bytes */
 // I2SRxBuffer rxBuffers[I2S_BUFFER_COUNT] __attribute__((section(".sram2")));
-// #endif
 
 void *rxBuffers = 0;
 /*----------------------------------------------------------------------------*/

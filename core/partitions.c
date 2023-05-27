@@ -6,6 +6,7 @@
 
 #include "partitions.h"
 #include <xcore/memory.h>
+#include <string.h>
 /*----------------------------------------------------------------------------*/
 #define SECTOR_SIZE 512
 /*----------------------------------------------------------------------------*/
@@ -37,9 +38,13 @@ bool partitionReadHeader(struct Interface *interface, uint64_t offset,
   /* Filter accepts inactive or bootable partition with non-zero type */
   if ((entry[0] == 0x00 || entry[0] >= 0x80) && entry[4] != 0x00)
   {
+    uint32_t tmp;
+
     desc->type = entry[4]; /* File system descriptor */
-    desc->offset = (uint64_t)(*(const uint32_t *)(entry + 8)) * SECTOR_SIZE;
-    desc->size = (uint64_t)(*(const uint32_t *)(entry + 12)) * SECTOR_SIZE;
+    memcpy(&tmp, entry + 8, sizeof(tmp));
+    desc->offset = (uint64_t)tmp * SECTOR_SIZE;
+    memcpy(&tmp, entry + 12, sizeof(tmp));
+    desc->size = (uint64_t)tmp * SECTOR_SIZE;
 
     return true;
   }
