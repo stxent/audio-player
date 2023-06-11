@@ -9,7 +9,6 @@
 /*----------------------------------------------------------------------------*/
 #include "board_shared.h"
 #include "player.h"
-#include <dpm/bus_handler.h>
 #include <halm/pin.h>
 /*----------------------------------------------------------------------------*/
 struct FsHandle;
@@ -42,7 +41,6 @@ struct Board
     struct Pin red;
     struct Pin whiteA;
     struct Pin whiteB;
-    struct Interface *serial;
   } indication;
 
   struct
@@ -79,6 +77,7 @@ struct Board
 /*----------------------------------------------------------------------------*/
 BEGIN_DECLS
 
+void appBoardCheckBoot(struct Board *);
 void appBoardInit(struct Board *);
 int appBoardStart(struct Board *);
 

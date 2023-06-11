@@ -37,6 +37,8 @@ struct Amplifier
 
   void (*errorCallback)(void *);
   void *errorCallbackArgument;
+  void (*idleCallback)(void *);
+  void *idleCallbackArgument;
   void (*updateCallback)(void *);
   void *updateCallbackArgument;
 
@@ -47,13 +49,14 @@ struct Amplifier
   uint32_t address;
   uint32_t rate;
   uint8_t config;
+  uint8_t leds;
   bool changed;
   bool pending;
   bool ready;
 
   struct
   {
-    uint8_t buffer[2];
+    uint8_t buffer[3];
     uint8_t state;
   } transfer;
 };
@@ -61,11 +64,13 @@ struct Amplifier
 BEGIN_DECLS
 
 void ampSetErrorCallback(void *, void (*)(void *), void *);
+void ampSetIdleCallback(void *, void (*)(void *), void *);
 void ampSetUpdateCallback(void *, void (*)(void *), void *);
 void ampSetUpdateWorkQueue(void *, struct WorkQueue *);
 
 bool ampIsReady(const void *);
 void ampReset(void *, uint8_t, bool);
+void ampSetDebugValue(void *, uint8_t);
 bool ampUpdate(void *);
 
 END_DECLS

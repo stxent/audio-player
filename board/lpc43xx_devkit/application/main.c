@@ -14,7 +14,10 @@ int main(void)
 {
   struct Board * const board = malloc(sizeof(struct Board));
   appBoardInit(board);
-  invokeStartupTask(board);
+
+#ifdef ENABLE_DFU
+  appBoardCheckBoot(board);
+#endif
 
 #ifdef ENABLE_DBG
   /*
@@ -24,5 +27,6 @@ int main(void)
   board->debug.idle = 5099992;
 #endif
 
+  invokeStartupTask(board);
   return appBoardStart(board);
 }

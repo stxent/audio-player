@@ -5,14 +5,19 @@
  */
 
 #include "board.h"
+#include "dfu_defs.h"
 #include "memory.h"
 #include "tasks.h"
 #include <halm/core/cortex/nvic.h>
 #include <halm/generic/work_queue.h>
+#include <halm/gpio_bus.h>
+#include <halm/platform/lpc/backup_domain.h>
 #include <halm/platform/lpc/i2s_dma.h>
 #include <halm/timer.h>
 #include <assert.h>
 /*----------------------------------------------------------------------------*/
+#define DFU_BUTTON_MASK 0x00000006UL
+
 DECLARE_WQ_IRQ(WQ_LP, SPI_ISR)
 /*----------------------------------------------------------------------------*/
 static const struct WorkQueueConfig workQueueConfig = {
@@ -24,6 +29,17 @@ static const struct WorkQueueIrqConfig workQueueIrqConfig = {
     .irq = SPI_IRQ,
     .priority = 0
 };
+/*----------------------------------------------------------------------------*/
+void appBoardCheckBoot(struct Board *board)
+{
+  const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
+
+  if (!(value & DFU_BUTTON_MASK))
+  {
+    *(uint32_t *)backupDomainAddress() = DFU_START_REQUEST;
+    nvicResetCore();
+  }
+}
 /*----------------------------------------------------------------------------*/
 void appBoardInit(struct Board *board)
 {
@@ -59,9 +75,9 @@ void appBoardInit(struct Board *board)
   board->indication.red = pinInit(BOARD_LED_R_PIN);
   pinOutput(board->indication.red, false);
   board->indication.whiteA = pinInit(BOARD_LED_WA_PIN);
-  pinOutput(board->indication.whiteA, true);
+  pinOutput(board->indication.whiteA, false);
   board->indication.whiteB = pinInit(BOARD_LED_WB_PIN);
-  pinOutput(board->indication.whiteB, true);
+  pinOutput(board->indication.whiteB, false);
 
   ready = ready && boardSetupAnalogPackage(&board->analogPackage);
   ready = ready && boardSetupButtonPackage(&board->buttonPackage);
@@ -91,7 +107,7 @@ void appBoardInit(struct Board *board)
   board->debug.timer = boardMakeLoadTimer();
   assert(board->debug.timer != NULL);
 
-  /* Init player instance */
+  /* Initialize player instance */
   ready = ready && playerInit(&board->player, board->audio.rx, board->audio.tx,
       I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH,
       rxBuffers, txBuffers, TRACK_COUNT, NULL);

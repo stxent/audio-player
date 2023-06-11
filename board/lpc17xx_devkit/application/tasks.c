@@ -23,6 +23,7 @@
 #define BUS_MAX_RETRIES 10
 /*----------------------------------------------------------------------------*/
 static void onBusError(void *, void *);
+static void onBusIdle(void *, void *);
 static void onButtonCheckEvent(void *);
 static void onCardMounted(void *);
 static void onCardUnmounted(void *);
@@ -94,6 +95,16 @@ static void onBusError(void *argument, void *device)
           AIC3X_NONE, AIC3X_LINE_OUT_DIFF);
     }
   }
+}
+/*----------------------------------------------------------------------------*/
+static void onBusIdle(void *argument, void *device)
+{
+  struct Board * const board = argument;
+
+  if (device == board->codecPackage.amp)
+    board->event.ampRetries = 0;
+  else
+    board->event.codecRetries = 0;
 }
 /*----------------------------------------------------------------------------*/
 static void onButtonCheckEvent(void *argument)
@@ -200,6 +211,26 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
 {
   struct Board * const board = argument;
 
+#ifdef ENABLE_DBG
+  static const char *STATE_NAMES[] = {
+      "PLAYING", "PAUSED", "STOPPED", "ERROR"
+  };
+  size_t count;
+  size_t index = playerGetCurrentTrack(&board->player);
+  size_t total = playerGetTrackCount(&board->player);
+  char text[64];
+
+  count = sprintf(text, "Player state %s track %lu/%lu\r\n",
+      STATE_NAMES[state],
+      (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
+      (unsigned long)total
+  );
+  ifWrite(board->system.serial, text, count);
+
+  ampSetDebugValue(board->codecPackage.amp,
+      (state == PLAYER_PLAYING || state == PLAYER_PAUSED) ? 0x20 : 0x00);
+#endif
+
   switch (state)
   {
     case PLAYER_PLAYING:
@@ -226,26 +257,6 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       wqAdd(WQ_DEFAULT, unmountTask, board);
       break;
   }
-
-#ifdef ENABLE_DBG
-  static const char *STATE_NAMES[] = {
-      "PLAYING",
-      "PAUSED",
-      "STOPPED",
-      "ERROR"
-  };
-  size_t count;
-  size_t index = playerGetCurrentTrack(&board->player);
-  size_t total = playerGetTrackCount(&board->player);
-  char text[64];
-
-  count = sprintf(text, "Player state %s track %lu/%lu\r\n",
-      STATE_NAMES[state],
-      (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
-      (unsigned long)total
-  );
-  ifWrite(board->system.serial, text, count);
-#endif
 }
 /*----------------------------------------------------------------------------*/
 static void mountTask(void *argument)
@@ -345,6 +356,7 @@ static void startupTask(void *argument)
   struct Board * const board = argument;
 
   bhSetErrorCallback(&board->codecPackage.handler, onBusError, board);
+  bhSetIdleCallback(&board->codecPackage.handler, onBusIdle, board);
   playerSetControlCallback(&board->player, onPlayerFormatChanged, board);
   playerSetStateCallback(&board->player, onPlayerStateChanged, board);
 

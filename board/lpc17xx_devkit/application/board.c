@@ -5,6 +5,7 @@
  */
 
 #include "board.h"
+#include "dfu_defs.h"
 #include "memory.h"
 #include "tasks.h"
 #include <halm/core/cortex/nvic.h>
@@ -16,7 +17,6 @@
 #include <assert.h>
 /*----------------------------------------------------------------------------*/
 #define DFU_BUTTON_MASK 0x00000006UL
-#define DFU_MAGIC_WORD  0x3A84508FUL
 
 DECLARE_WQ_IRQ(WQ_LP, SPI_ISR)
 /*----------------------------------------------------------------------------*/
@@ -36,7 +36,7 @@ void appBoardCheckBoot(struct Board *board)
 
   if (!(value & DFU_BUTTON_MASK))
   {
-    *(uint32_t *)backupDomainAddress() = DFU_MAGIC_WORD;
+    *(uint32_t *)backupDomainAddress() = DFU_START_REQUEST;
     nvicResetCore();
   }
 }

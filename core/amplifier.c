@@ -18,6 +18,7 @@ enum State
   STATE_CONFIG_WAIT,
   STATE_CONFIG_START,
   STATE_CONFIG_BUS_WAIT,
+  STATE_CONFIG_END,
 
   STATE_ERROR_WAIT,
   STATE_ERROR_INTERFACE,
@@ -92,7 +93,7 @@ static void onBusEvent(void *object)
   else
   {
     amp->ready = true;
-    amp->transfer.state = STATE_IDLE;
+    amp->transfer.state = STATE_CONFIG_END;
   }
 
   ifSetCallback(amp->bus, NULL, NULL);
@@ -152,13 +153,13 @@ static enum Result ampInit(void *object, const void *arguments)
   amp->wq = NULL;
 
   amp->errorCallback = NULL;
-  amp->errorCallbackArgument = NULL;
+  amp->idleCallback = NULL;
   amp->updateCallback = NULL;
-  amp->updateCallbackArgument = NULL;
 
   amp->address = config->address;
   amp->rate = config->rate;
   amp->config = 0;
+  amp->leds = 0;
   amp->changed = false;
   amp->pending = false;
   amp->ready = false;
@@ -190,6 +191,17 @@ void ampSetErrorCallback(void *object, void (*callback)(void *),
   amp->errorCallback = callback;
 }
 /*----------------------------------------------------------------------------*/
+void ampSetIdleCallback(void *object, void (*callback)(void *),
+    void *argument)
+{
+  struct Amplifier * const amp = object;
+
+  assert(callback != NULL);
+
+  amp->idleCallbackArgument = argument;
+  amp->idleCallback = callback;
+}
+/*----------------------------------------------------------------------------*/
 void ampSetUpdateCallback(void *object, void (*callback)(void *),
     void *argument)
 {
@@ -216,6 +228,12 @@ bool ampIsReady(const void *object)
 {
   const struct Amplifier * const amp = object;
   return amp->ready;
+}
+/*----------------------------------------------------------------------------*/
+void ampSetDebugValue(void *object, uint8_t value)
+{
+  struct Amplifier * const amp = object;
+  amp->leds = value;
 }
 /*----------------------------------------------------------------------------*/
 void ampReset(void *object, uint8_t gain, bool enabled)
@@ -265,9 +283,22 @@ bool ampUpdate(void *object)
 
         amp->transfer.buffer[0] = AMP_REG_CTL;
         amp->transfer.buffer[1] = amp->config;
+        amp->transfer.buffer[2] = amp->leds;
 
         busInit(amp, false);
         ifWrite(amp->bus, amp->transfer.buffer, sizeof(amp->transfer.buffer));
+        break;
+
+      case STATE_CONFIG_END:
+        amp->transfer.state = STATE_IDLE;
+
+        if (!amp->changed)
+        {
+          if (amp->idleCallback != NULL)
+            amp->idleCallback(amp->idleCallbackArgument);
+        }
+        else
+          updated = true;
         break;
 
       case STATE_ERROR_INTERFACE:

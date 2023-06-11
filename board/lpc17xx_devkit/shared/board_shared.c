@@ -347,10 +347,12 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
   bool ready = bhInit(&package->handler, 2, WQ_LP);
 
   ready = ready && bhAttach(&package->handler, package->amp,
-      ampSetErrorCallback, ampSetUpdateCallback, ampUpdate);
+      ampSetErrorCallback, ampSetIdleCallback, ampSetUpdateCallback,
+      ampUpdate);
 
   ready = ready && bhAttach(&package->handler, package->codec,
-        codecSetErrorCallback, codecSetUpdateCallback, codecUpdate);
+      codecSetErrorCallback, codecSetIdleCallback, codecSetUpdateCallback,
+      codecUpdate);
 
   return ready;
 }

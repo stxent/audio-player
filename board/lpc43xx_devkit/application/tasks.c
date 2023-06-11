@@ -23,6 +23,7 @@
 #define BUS_MAX_RETRIES 10
 /*----------------------------------------------------------------------------*/
 static void onBusError(void *, void *);
+static void onBusIdle(void *, void *);
 static void onButtonCheckEvent(void *);
 static void onCardMounted(void *);
 static void onCardUnmounted(void *);
@@ -80,28 +81,44 @@ static void onBusError(void *argument, void *device)
   {
     if (board->event.ampRetries < BUS_MAX_RETRIES - 1)
     {
+      pinReset(board->indication.whiteA);
       ++board->event.ampRetries;
+
       ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
     }
-    else
-      pinReset(board->indication.whiteA);
   }
   else
   {
     if (board->event.codecRetries < BUS_MAX_RETRIES - 1)
     {
+      pinReset(board->indication.whiteB);
       ++board->event.codecRetries;
+
       codecReset(board->codecPackage.codec, 44100,
           AIC3X_NONE, AIC3X_LINE_OUT_DIFF);
     }
-    else
-      pinReset(board->indication.whiteB);
+  }
+}
+/*----------------------------------------------------------------------------*/
+static void onBusIdle(void *argument, void *device)
+{
+  struct Board * const board = argument;
+
+  if (device == board->codecPackage.amp)
+  {
+    pinSet(board->indication.whiteA);
+    board->event.ampRetries = 0;
+  }
+  else
+  {
+    pinSet(board->indication.whiteB);
+    board->event.codecRetries = 0;
   }
 }
 /*----------------------------------------------------------------------------*/
 static void onButtonCheckEvent(void *argument)
 {
-  static const uint8_t DEBOUNCE_THRESHOLD = 4;
+  static const uint8_t DEBOUNCE_THRESHOLD = 3;
 
   struct Board * const board = argument;
   const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
@@ -203,6 +220,26 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
 {
   struct Board * const board = argument;
 
+#ifdef ENABLE_DBG
+  static const char *STATE_NAMES[] = {
+      "PLAYING", "PAUSED", "STOPPED", "ERROR"
+  };
+  size_t count;
+  size_t index = playerGetCurrentTrack(&board->player);
+  size_t total = playerGetTrackCount(&board->player);
+  char text[64];
+
+  count = sprintf(text, "Player state %s track %lu/%lu\r\n",
+      STATE_NAMES[state],
+      (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
+      (unsigned long)total
+  );
+  ifWrite(board->system.serial, text, count);
+
+  ampSetDebugValue(board->codecPackage.amp,
+      (state == PLAYER_PLAYING || state == PLAYER_PAUSED) ? 0x20 : 0x00);
+#endif
+
   switch (state)
   {
     case PLAYER_PLAYING:
@@ -229,31 +266,13 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       wqAdd(WQ_DEFAULT, unmountTask, board);
       break;
   }
-
-#ifdef ENABLE_DBG
-  static const char *STATE_NAMES[] = {
-      "PLAYING",
-      "PAUSED",
-      "STOPPED",
-      "ERROR"
-  };
-  size_t count;
-  size_t index = playerGetCurrentTrack(&board->player);
-  size_t total = playerGetTrackCount(&board->player);
-  char text[64];
-
-  count = sprintf(text, "Player state %s track %lu/%lu\r\n",
-      STATE_NAMES[state],
-      (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
-      (unsigned long)total
-  );
-  ifWrite(board->system.serial, text, count);
-#endif
 }
 /*----------------------------------------------------------------------------*/
 static void mountTask(void *argument)
 {
   struct Board * const board = argument;
+
+  board->event.mount = false;
 
   if (board->fs.handle == NULL)
   {
@@ -330,6 +349,7 @@ static void startupTask(void *argument)
   struct Board * const board = argument;
 
   bhSetErrorCallback(&board->codecPackage.handler, onBusError, board);
+  bhSetIdleCallback(&board->codecPackage.handler, onBusIdle, board);
   playerSetControlCallback(&board->player, onPlayerFormatChanged, board);
   playerSetStateCallback(&board->player, onPlayerStateChanged, board);
 

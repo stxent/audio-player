@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
-// #define AUDIOBOX_V1
+/* #define AUDIOBOX_V1 */
 
 #ifdef AUDIOBOX_V1
 #  define BOARD_ADC_PIN         PIN(0, 2)

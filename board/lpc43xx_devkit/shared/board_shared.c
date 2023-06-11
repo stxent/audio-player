@@ -33,9 +33,10 @@
 /* GPDMA 1 */
 
 #define PRI_TIMER_SYS 0
+/* WQ_LP 0 */
 /*----------------------------------------------------------------------------*/
 static const PinNumber adcPinArray[] = {
-    PIN(PORT_ADC, 0),
+    BOARD_ADC_PIN,
     0
 };
 
@@ -307,10 +308,12 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
   bool ready = bhInit(&package->handler, 2, WQ_LP);
 
   ready = ready && bhAttach(&package->handler, package->amp,
-      ampSetErrorCallback, ampSetUpdateCallback, ampUpdate);
+      ampSetErrorCallback, ampSetIdleCallback, ampSetUpdateCallback,
+      ampUpdate);
 
   ready = ready && bhAttach(&package->handler, package->codec,
-        codecSetErrorCallback, codecSetUpdateCallback, codecUpdate);
+      codecSetErrorCallback, codecSetIdleCallback, codecSetUpdateCallback,
+      codecUpdate);
 
   return ready;
 }

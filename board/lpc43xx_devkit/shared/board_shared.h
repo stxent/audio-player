@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
+#define BOARD_ADC_PIN         PIN(PORT_ADC, 0)
 #define BOARD_BUTTON_1_PIN    PIN(PORT_7, 7)  /* Previous */
 #define BOARD_BUTTON_2_PIN    PIN(PORT_7, 5)  /* Stop */
 #define BOARD_BUTTON_3_PIN    PIN(PORT_7, 0)  /* Play/Pause */

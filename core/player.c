@@ -463,7 +463,7 @@ static bool parseHeaderMP3(struct Player *player, struct FsNode *node,
           const int error = MP3GetNextFrameInfo(player->mp3Decoder, &frameInfo,
               player->buffer + offset, count - offset);
 
-          if (error != ERR_MP3_INVALID_FRAMEHEADER)
+          if (error == ERR_MP3_NONE)
           {
             info->end = length;
             info->offset = headerPosition + (FsLength)offset;
