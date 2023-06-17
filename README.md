@@ -14,12 +14,12 @@ cd audio-player
 git submodule update --init --recursive
 ```
 
-Build release version (DFU disabled) for LPC17xx development board:
+Build release version for LPC17xx development board:
 
 ```sh
 mkdir build
 cd build
-cmake .. -DPLATFORM=LPC17XX -DBOARD=lpc17xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/xcore/toolchains/cortex-m3.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_MP3=ON -DUSE_LTO=OFF
+cmake .. -DPLATFORM=LPC17XX -DBOARD=lpc17xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/xcore/toolchains/cortex-m3.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_MP3=ON -DUSE_DFU=ON -DUSE_LTO=OFF -DUSE_WDT=ON
 make
 ```
 
@@ -28,7 +28,7 @@ Build release version for LPC43xx development board:
 ```sh
 mkdir build
 cd build
-cmake .. -DPLATFORM=LPC43XX -DBOARD=lpc43xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/xcore/toolchains/cortex-m4.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_MP3=ON -DUSE_LTO=OFF
+cmake .. -DPLATFORM=LPC43XX -DBOARD=lpc43xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/xcore/toolchains/cortex-m4.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_MP3=ON -DUSE_DFU=ON -DUSE_LTO=OFF -DUSE_WDT=ON
 make
 ```
 

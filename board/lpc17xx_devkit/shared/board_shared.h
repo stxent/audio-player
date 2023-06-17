@@ -28,6 +28,8 @@
 #  define BOARD_LED_R_PIN       PIN(1, 18)
 #  define BOARD_LED_G_PIN       PIN(1, 23)
 #  define BOARD_LED_B_PIN       PIN(1, 24)
+#  define BOARD_LED_IND_A_PIN   PIN(1, 8)
+#  define BOARD_LED_IND_B_PIN   PIN(1, 9)
 #  define BOARD_POWER_PIN       PIN(2, 8)
 #  define BOARD_SDIO_CS_PIN     PIN(0, 22)
 #else
@@ -41,6 +43,8 @@
 #  define BOARD_LED_R_PIN       PIN(1, 10)
 #  define BOARD_LED_G_PIN       PIN(1, 9)
 #  define BOARD_LED_B_PIN       PIN(1, 8)
+#  define BOARD_LED_IND_A_PIN   PIN(2, 0)
+#  define BOARD_LED_IND_B_PIN   PIN(2, 1)
 #  define BOARD_POWER_PIN       PIN(2, 8)
 #  define BOARD_SDIO_CS_PIN     PIN(0, 22)
 #endif

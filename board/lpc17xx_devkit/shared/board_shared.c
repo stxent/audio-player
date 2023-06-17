@@ -9,7 +9,6 @@
 #include <dpm/audio/tlv320aic3x.h>
 #include <dpm/button.h>
 #include <halm/core/cortex/systick.h>
-#include <halm/generic/i2c.h>
 #include <halm/generic/sdio_spi.h>
 #include <halm/generic/software_timer.h>
 #include <halm/gpio_bus.h>
@@ -217,12 +216,7 @@ struct Timer *boardMakeMountTimer(void)
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2C(void)
 {
-  struct Interface * const i2c = init(I2C, &i2cConfig);
-
-  if (i2c != NULL)
-    ifSetParam(i2c, IF_I2C_BUS_RECOVERY, NULL);
-
-  return i2c;
+  return init(I2C, &i2cConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2S(void)

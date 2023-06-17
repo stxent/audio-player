@@ -39,6 +39,9 @@ struct Board
     struct Pin blue;
     struct Pin green;
     struct Pin red;
+
+    struct Pin indA;
+    struct Pin indB;
   } indication;
 
   struct

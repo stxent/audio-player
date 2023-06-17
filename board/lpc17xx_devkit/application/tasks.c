@@ -13,6 +13,7 @@
 #include <dpm/audio/codec.h>
 #include <dpm/audio/tlv320aic3x.h>
 #include <halm/gpio_bus.h>
+#include <halm/generic/i2c.h>
 #include <halm/generic/mmcsd.h>
 #include <halm/timer.h>
 #include <halm/watchdog.h>
@@ -78,19 +79,25 @@ static void onBusError(void *argument, void *device)
   ifWrite(board->system.serial, text, count);
 #endif
 
+  ifSetParam(board->codecPackage.i2c, IF_I2C_BUS_RECOVERY, NULL);
+
   if (device == board->codecPackage.amp)
   {
-    if (board->event.ampRetries < BUS_MAX_RETRIES - 1)
+    if (board->event.ampRetries < BUS_MAX_RETRIES)
     {
       ++board->event.ampRetries;
+
+      pinReset(board->indication.indA);
       ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
     }
   }
   else
   {
-    if (board->event.codecRetries < BUS_MAX_RETRIES - 1)
+    if (board->event.codecRetries < BUS_MAX_RETRIES)
     {
       ++board->event.codecRetries;
+
+      pinReset(board->indication.indB);
       codecReset(board->codecPackage.codec, 44100,
           AIC3X_NONE, AIC3X_LINE_OUT_DIFF);
     }
@@ -102,9 +109,15 @@ static void onBusIdle(void *argument, void *device)
   struct Board * const board = argument;
 
   if (device == board->codecPackage.amp)
+  {
     board->event.ampRetries = 0;
+    pinSet(board->indication.indA);
+  }
   else
+  {
     board->event.codecRetries = 0;
+    pinSet(board->indication.indB);
+  }
 }
 /*----------------------------------------------------------------------------*/
 static void onButtonCheckEvent(void *argument)

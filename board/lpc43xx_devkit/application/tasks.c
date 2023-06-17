@@ -79,21 +79,21 @@ static void onBusError(void *argument, void *device)
 
   if (device == board->codecPackage.amp)
   {
-    if (board->event.ampRetries < BUS_MAX_RETRIES - 1)
+    if (board->event.ampRetries < BUS_MAX_RETRIES)
     {
-      pinReset(board->indication.whiteA);
       ++board->event.ampRetries;
 
+      pinReset(board->indication.indA);
       ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
     }
   }
   else
   {
-    if (board->event.codecRetries < BUS_MAX_RETRIES - 1)
+    if (board->event.codecRetries < BUS_MAX_RETRIES)
     {
-      pinReset(board->indication.whiteB);
       ++board->event.codecRetries;
 
+      pinReset(board->indication.indB);
       codecReset(board->codecPackage.codec, 44100,
           AIC3X_NONE, AIC3X_LINE_OUT_DIFF);
     }
@@ -106,13 +106,13 @@ static void onBusIdle(void *argument, void *device)
 
   if (device == board->codecPackage.amp)
   {
-    pinSet(board->indication.whiteA);
     board->event.ampRetries = 0;
+    pinSet(board->indication.indA);
   }
   else
   {
-    pinSet(board->indication.whiteB);
     board->event.codecRetries = 0;
+    pinSet(board->indication.indB);
   }
 }
 /*----------------------------------------------------------------------------*/

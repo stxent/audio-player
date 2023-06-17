@@ -74,6 +74,10 @@ void appBoardInit(struct Board *board)
   pinOutput(board->indication.green, false);
   board->indication.red = pinInit(BOARD_LED_R_PIN);
   pinOutput(board->indication.red, false);
+  board->indication.indA = pinInit(BOARD_LED_IND_A_PIN);
+  pinOutput(board->indication.indA, false);
+  board->indication.indB = pinInit(BOARD_LED_IND_B_PIN);
+  pinOutput(board->indication.indB, false);
 
   ready = ready && boardSetupAnalogPackage(&board->analogPackage);
   ready = ready && boardSetupButtonPackage(&board->buttonPackage);
