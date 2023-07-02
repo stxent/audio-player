@@ -116,8 +116,8 @@ void appBoardInit(struct Board *board)
 
   /* Initialize player instance */
   ready = ready && playerInit(&board->player, board->audio.rx, board->audio.tx,
-      I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH,
-      rxBuffers, txBuffers, TRACK_COUNT, rand);
+      I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH, TRACK_COUNT,
+      rxBuffers, txBuffers, trackBuffers, rand);
 
   assert(ready);
   (void)ready;

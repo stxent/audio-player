@@ -719,8 +719,8 @@ static inline void stopPlayingTask(void *argument)
 }
 /*----------------------------------------------------------------------------*/
 bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
-    size_t buffers, size_t rxLength, size_t txLength,
-    void *rxArena, void *txArena, size_t tracks, int (*random)(void))
+    size_t buffers, size_t rxLength, size_t txLength, size_t trackCount,
+    void *rxArena, void *txArena, void *trackArena, int (*random)(void))
 {
   if (rxLength > txLength)
     return false;
@@ -733,8 +733,17 @@ bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
   if (player->txReq == NULL)
     goto free_rx;
 
-  if (!pathArrayInit(&player->tracks, tracks))
-    goto free_tx;
+  if (trackArena != NULL)
+  {
+    player->preallocated = true;
+    pathArrayInitArena(&player->tracks, trackCount, trackArena);
+  }
+  else
+  {
+    player->preallocated = false;
+    if (!pathArrayInit(&player->tracks, trackCount))
+      goto free_tx;
+  }
 
 #ifdef CONFIG_ENABLE_MP3
   player->mp3Decoder = MP3InitDecoder();
@@ -788,7 +797,8 @@ bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
 
 #ifdef CONFIG_ENABLE_MP3
 free_tracks:
-  pathArrayDeinit(&player->tracks);
+  if (!player->preallocated)
+    pathArrayDeinit(&player->tracks);
 #endif
 
 free_tx:
@@ -804,7 +814,9 @@ void playerDeinit(struct Player *player)
   MP3FreeDecoder(player->mp3Decoder);
 #endif
 
-  pathArrayDeinit(&player->tracks);
+  if (!player->preallocated)
+    pathArrayDeinit(&player->tracks);
+
   free(player->txReq);
   free(player->rxReq);
 }

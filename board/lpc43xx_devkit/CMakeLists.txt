@@ -21,4 +21,4 @@ endif()
 configure_file("memory.ld" "${PROJECT_BINARY_DIR}/memory.ld")
 
 set(FLAGS_LINKER "--specs=nosys.specs --specs=nano.specs -Wl,--gc-sections" PARENT_SCOPE)
-set(FLAGS_OBJCOPY "--remove-section" ".sram1" "--remove-section" ".sram2" "--remove-section" ".sram3" PARENT_SCOPE)
+set(FLAGS_OBJCOPY "--remove-section" ".sram2" "--remove-section" ".sram3" "--remove-section" ".sram4" PARENT_SCOPE)

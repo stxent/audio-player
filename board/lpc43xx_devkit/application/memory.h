@@ -9,10 +9,12 @@
 /*----------------------------------------------------------------------------*/
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
-#define I2S_BUFFER_COUNT      7
+#define I2S_BUFFER_COUNT      3
 #define I2S_RX_BUFFER_LENGTH  4608
-#define I2S_TX_BUFFER_LENGTH  4608
+#define I2S_TX_BUFFER_LENGTH  9216
+#define TRACK_COUNT           256
 
+extern void *trackBuffers;
 extern void *rxBuffers;
 extern void *txBuffers;
 /*----------------------------------------------------------------------------*/

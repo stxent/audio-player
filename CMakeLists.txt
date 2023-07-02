@@ -11,6 +11,7 @@ option(USE_DBG "Enable debug messages." OFF)
 option(USE_DFU "Use memory layout for the bootloader." OFF)
 option(USE_LTO "Enable Link Time Optimization." OFF)
 option(USE_WDT "Enable watchdog timer." OFF)
+set(PATH_LENGTH 64 CACHE STRING "Maximum length of track path length in bytes.")
 
 # Default compiler flags
 set(FLAGS_DEFAULT "-pedantic -Wall -Wextra -Wshadow")

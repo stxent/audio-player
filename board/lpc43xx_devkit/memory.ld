@@ -27,10 +27,12 @@ MEMORY
   SRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 32K - 32
   /* Local SRAM */
   SRAM1 (rwx) : ORIGIN = 0x10080000, LENGTH = 40K
-  /* AHB SRAM Banks 0 and 1 */
+  /* AHB SRAM */
   SRAM2 (rwx) : ORIGIN = 0x20000000, LENGTH = 32K
-  /* AHB SRAM Banks 2 and 3 */
-  SRAM3 (rwx) : ORIGIN = 0x20008000, LENGTH = 32K
+  /* AHB SRAM */
+  SRAM3 (rwx) : ORIGIN = 0x20008000, LENGTH = 16K
+  /* AHB SRAM */
+  SRAM4 (rwx) : ORIGIN = 0x2000C000, LENGTH = 16K
 }
 
 SECTIONS
@@ -59,7 +61,7 @@ SECTIONS
     *(.data*)
 
     _edata = .;
-  } >SRAM0
+  } >SRAM1
 
   .bss : ALIGN(4)
   {
@@ -70,12 +72,6 @@ SECTIONS
     *(COMMON)
 
     _ebss = .;
-  } >SRAM0
-
-  .sram1 : ALIGN(4)
-  {
-    *(.sram1)
-    *(.sram1*)
 
     . = ALIGN(4);
     heapStart = .;
@@ -92,6 +88,12 @@ SECTIONS
     *(.sram3)
     *(.sram3*)
   } >SRAM3
+
+  .sram4 : ALIGN(4)
+  {
+    *(.sram4)
+    *(.sram4*)
+  } >SRAM4
 
   .ahb :
   {
@@ -161,7 +163,7 @@ SECTIONS
   }
 
   PROVIDE(end = heapStart);
-  PROVIDE(_stack = ORIGIN(SRAM0) + LENGTH(SRAM0));
+  PROVIDE(_stack = ORIGIN(SRAM1) + LENGTH(SRAM1));
 
   PROVIDE(_seeprom = ORIGIN(EEPROM));
   PROVIDE(_eeeprom = ORIGIN(EEPROM) + LENGTH(EEPROM));

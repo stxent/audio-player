@@ -6,7 +6,7 @@ file(GLOB_RECURSE CORE_SOURCES "*.c")
 
 # Core package
 add_library(core ${CORE_SOURCES})
-target_compile_definitions(core PRIVATE -DFS_NAME_LENGTH=${FS_NAME_LENGTH}) # XXX Public in xcore?
+target_compile_definitions(core PUBLIC -DCONFIG_PATH_LENGTH=${PATH_LENGTH})
 target_include_directories(core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(core PUBLIC halm yaf)
 

@@ -11,7 +11,11 @@
 #include <xcore/fs/fs.h>
 #include <xcore/stream.h>
 /*----------------------------------------------------------------------------*/
-#define TRACK_PATH_LENGTH 64
+#ifndef CONFIG_PATH_LENGTH
+#  define TRACK_PATH_LENGTH 64
+#else
+#  define TRACK_PATH_LENGTH CONFIG_PATH_LENGTH
+#endif
 
 enum PlayerState
 {
@@ -86,14 +90,16 @@ struct Player
   void *mp3Decoder;
   /* Random number generation function */
   int (*random)(void);
-  /* Enabe track shuffle mode */
+  /* Track buffer is preallocated */
+  bool preallocated;
+  /* Enable track shuffle mode */
   bool shuffle;
 };
 /*----------------------------------------------------------------------------*/
 BEGIN_DECLS
 
 bool playerInit(struct Player *, struct Stream *, struct Stream *,
-    size_t, size_t, size_t, void *, void *, size_t, int (*)(void));
+    size_t, size_t, size_t, size_t, void *, void *, void *, int (*)(void));
 void playerDeinit(struct Player *);
 size_t playerGetCurrentTrack(const struct Player *);
 size_t playerGetTrackCount(const struct Player *);

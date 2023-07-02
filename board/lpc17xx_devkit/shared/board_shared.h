@@ -48,8 +48,6 @@
 #  define BOARD_POWER_PIN       PIN(2, 8)
 #  define BOARD_SDIO_CS_PIN     PIN(0, 22)
 #endif
-
-#define TRACK_COUNT             64
 /*----------------------------------------------------------------------------*/
 struct Entity;
 struct GpioBus;
