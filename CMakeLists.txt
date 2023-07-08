@@ -10,6 +10,7 @@ option(ENABLE_MP3 "Enable MP3 support." ON)
 option(USE_DBG "Enable debug messages." OFF)
 option(USE_DFU "Use memory layout for the bootloader." OFF)
 option(USE_LTO "Enable Link Time Optimization." OFF)
+option(USE_NOR "Use memory layout for external flash memory." OFF)
 option(USE_WDT "Enable watchdog timer." OFF)
 set(PATH_LENGTH 64 CACHE STRING "Maximum length of track path length in bytes.")
 

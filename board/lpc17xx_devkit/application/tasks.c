@@ -276,8 +276,6 @@ static void mountTask(void *argument)
 {
   struct Board * const board = argument;
 
-  board->event.mount = false;
-
   if (board->fs.handle == NULL)
   {
     const struct MMCSDConfig cardConfig = {
@@ -328,6 +326,8 @@ static void mountTask(void *argument)
       }
     }
   }
+
+  board->event.mount = false;
 }
 /*----------------------------------------------------------------------------*/
 static void playNextTask(void *argument)

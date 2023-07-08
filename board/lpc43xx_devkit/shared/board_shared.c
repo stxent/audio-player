@@ -35,129 +35,8 @@
 #define PRI_TIMER_SYS 0
 /* WQ_LP 0 */
 /*----------------------------------------------------------------------------*/
-static const PinNumber adcPinArray[] = {
-    BOARD_ADC_PIN,
-    0
-};
-
-static const struct AdcDmaConfig adcConfig = {
-    .pins = adcPinArray,
-    .event = ADC_CTOUT_15,
-    .channel = 0,
-    .dma = 2
-};
-
-static const struct SimpleGpioBusConfig busConfig = {
-    .pins = (const PinNumber []){
-        BOARD_BUTTON_1_PIN,
-        BOARD_BUTTON_2_PIN,
-        BOARD_BUTTON_3_PIN,
-        BOARD_BUTTON_4_PIN,
-        0
-    },
-    .direction = PIN_INPUT,
-    .pull = PIN_PULLUP
- };
-
-static const struct GpTimerConfig adcTimerConfig = {
-    .frequency = 1000000,
-    .event = GPTIMER_MATCH3,
-    .channel = 3
-};
-
-static const struct GpTimerConfig codecTimerConfig = {
-    .frequency = 1000000,
-    .priority = PRI_TIMER_I2C,
-    .channel = 2
-};
-
-static const struct GpTimerConfig loadTimerConfig = {
-    .frequency = 1000000,
-    .priority = PRI_TIMER_DBG,
-    .channel = 1
-};
-
-static const struct I2CConfig i2cConfig = {
-    .rate = 400000, /* Initial rate */
-    .scl = PIN(PORT_I2C, PIN_I2C0_SCL),
-    .sda = PIN(PORT_I2C, PIN_I2C0_SDA),
-    .priority = PRI_I2C,
-    .channel = 0
-};
-
-static const struct I2SDmaConfig i2sConfig = {
-    .size = 2,
-    .rate = 44100,
-    .width = I2S_WIDTH_16,
-    .tx = {
-        .sda = PIN(PORT_7, 2),
-        .sck = PIN(PORT_4, 7),
-        .ws = PIN(PORT_7, 1),
-        .mclk = PIN(PORT_CLK, 2),
-        .dma = 0
-    },
-    .rx = {
-        .sda = PIN(PORT_6, 2),
-        .dma = 1
-    },
-    .priority = PRI_I2S,
-    .channel = 0,
-    .mono = false,
-    .slave = false
-};
-
-static const struct SerialConfig serialConfig = {
-    .rxLength = 16,
-    .txLength = 128,
-    .rate = 115200,
-    .rx = PIN(PORT_1, 14),
-    .tx = PIN(PORT_5, 6),
-    .priority = PRI_SERIAL,
-    .channel = 1
-};
-
-static const struct SdmmcConfig sdmmcConfig = {
-    .rate = 17000000,
-    .clk = PIN(PORT_CLK, 0),
-    .cmd = PIN(PORT_1, 6),
-    .dat0 = PIN(PORT_1, 9),
-    .dat1 = PIN(PORT_1, 10),
-    .dat2 = PIN(PORT_1, 11),
-    .dat3 = PIN(PORT_1, 12),
-    .priority = PRI_SDMMC
-};
-
-static const struct WdtConfig wdtConfig = {
-    .period = 1000
-};
-/*----------------------------------------------------------------------------*/
-static const struct GenericClockConfig initialClockConfig = {
-    .source = CLOCK_INTERNAL
-};
-
-static const struct GenericClockConfig mainClockConfig = {
-    .source = CLOCK_PLL
-};
-
-static const struct GenericClockConfig sdClockConfig = {
-    .source = CLOCK_IDIVB
-};
-
-static const struct GenericDividerConfig dividerConfig = {
-    .source = CLOCK_PLL,
-    .divisor = 1
-};
-
-static const struct ExternalOscConfig extOscConfig = {
-    .frequency = 12000000,
-    .bypass = false
-};
-
-static const struct PllConfig sysPllConfig = {
-    .source = CLOCK_EXTERNAL,
-    .divisor = 4,
-    .multiplier = 17
-};
+static struct ClockSettings sharedClockSettings
+    __attribute__((section(".shared")));
 /*----------------------------------------------------------------------------*/
 struct Entity *boardMakeAmp(struct Interface *i2c, struct Timer *timer)
 {
@@ -187,11 +66,23 @@ struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeCodecTimer(void)
 {
+  static const struct GpTimerConfig codecTimerConfig = {
+      .frequency = 1000000,
+      .priority = PRI_TIMER_I2C,
+      .channel = 2
+  };
+
   return init(GpTimer, &codecTimerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeLoadTimer(void)
 {
+  static const struct GpTimerConfig loadTimerConfig = {
+      .frequency = 1000000,
+      .priority = PRI_TIMER_DBG,
+      .channel = 1
+  };
+
   return init(GpTimer, &loadTimerConfig);
 }
 /*----------------------------------------------------------------------------*/
@@ -202,32 +93,106 @@ struct Timer *boardMakeMountTimer(void)
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2C(void)
 {
+  static const struct I2CConfig i2cConfig = {
+      .rate = 400000, /* Initial rate */
+      .scl = PIN(PORT_I2C, PIN_I2C0_SCL),
+      .sda = PIN(PORT_I2C, PIN_I2C0_SDA),
+      .priority = PRI_I2C,
+      .channel = 0
+  };
+
   return init(I2C, &i2cConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2S(void)
 {
+  static const struct I2SDmaConfig i2sConfig = {
+      .size = 2,
+      .rate = 44100,
+      .width = I2S_WIDTH_16,
+      .tx = {
+          .sda = PIN(PORT_7, 2),
+          .sck = PIN(PORT_4, 7),
+          .ws = PIN(PORT_7, 1),
+          .mclk = PIN(PORT_CLK, 2),
+          .dma = 0
+      },
+      .rx = {
+          .sda = PIN(PORT_6, 2),
+          .dma = 1
+      },
+      .priority = PRI_I2S,
+      .channel = 0,
+      .mono = false,
+      .slave = false
+  };
+
   return init(I2SDma, &i2sConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeSDMMC(void)
 {
+  static const struct SdmmcConfig sdmmcConfig = {
+      .rate = 17000000,
+      .clk = PIN(PORT_CLK, 0),
+      .cmd = PIN(PORT_1, 6),
+      .dat0 = PIN(PORT_1, 9),
+      .dat1 = PIN(PORT_1, 10),
+      .dat2 = PIN(PORT_1, 11),
+      .dat3 = PIN(PORT_1, 12),
+      .priority = PRI_SDMMC
+  };
+
   return init(Sdmmc, &sdmmcConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeSerial(void)
 {
-  clockEnable(Uart1Clock, &mainClockConfig);
+  static const struct SerialConfig serialConfig = {
+      .rxLength = 16,
+      .txLength = 128,
+      .rate = 115200,
+      .rx = PIN(PORT_1, 14),
+      .tx = PIN(PORT_5, 6),
+      .priority = PRI_SERIAL,
+      .channel = 1
+  };
+
   return init(Serial, &serialConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Watchdog *boardMakeWatchdog(void)
 {
+  static const struct WdtConfig wdtConfig = {
+      .period = 1000
+  };
+
   return init(Wdt, &wdtConfig);
+}
+/*----------------------------------------------------------------------------*/
+bool boardLoadClock(void)
+{
+  return loadClockSettings(&sharedClockSettings);
 }
 /*----------------------------------------------------------------------------*/
 bool boardSetupAnalogPackage(struct AnalogPackage *package)
 {
+  static const PinNumber adcPins[] = {
+      BOARD_ADC_PIN,
+      0
+  };
+  static const struct AdcDmaConfig adcConfig = {
+      .pins = adcPins,
+      .event = ADC_CTOUT_15,
+      .channel = 0,
+      .dma = 2
+  };
+  static const struct GpTimerConfig adcTimerConfig = {
+      .frequency = 1000000,
+      .event = GPTIMER_MATCH3,
+      .channel = 3
+  };
+
   package->timer = NULL;
 
   package->adc = init(AdcDma, &adcConfig);
@@ -248,6 +213,19 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
 /*----------------------------------------------------------------------------*/
 bool boardSetupButtonPackage(struct ButtonPackage *package)
 {
+  static const PinNumber busPins[] = {
+      BOARD_BUTTON_1_PIN,
+      BOARD_BUTTON_2_PIN,
+      BOARD_BUTTON_3_PIN,
+      BOARD_BUTTON_4_PIN,
+      0
+  };
+  static const struct SimpleGpioBusConfig busConfig = {
+      .pins = busPins,
+      .direction = PIN_INPUT,
+      .pull = PIN_PULLUP
+  };
+
   package->timer = NULL;
 
   package->buttons = init(SimpleGpioBus, &busConfig);
@@ -320,32 +298,48 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
 /*----------------------------------------------------------------------------*/
 bool boardSetupClock(void)
 {
-  clockEnable(MainClock, &initialClockConfig);
+  static const struct GenericDividerConfig divConfig = {
+      .source = CLOCK_PLL,
+      .divisor = 1
+  };
+  static const struct ExternalOscConfig extOscConfig = {
+      .frequency = 12000000
+  };
+  static const struct PllConfig sysPllConfig = {
+      .source = CLOCK_EXTERNAL,
+      .divisor = 4,
+      .multiplier = 17
+  };
 
-  clockEnable(ExternalOsc, &extOscConfig);
+  clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_INTERNAL});
+
+  if (clockEnable(ExternalOsc, &extOscConfig) != E_OK)
+    return false;
   while (!clockReady(ExternalOsc));
 
-  clockEnable(SystemPll, &sysPllConfig);
+  if (clockEnable(SystemPll, &sysPllConfig) != E_OK)
+    return false;
   while (!clockReady(SystemPll));
 
-  clockEnable(DividerB, &dividerConfig);
+  if (clockEnable(DividerB, &divConfig) != E_OK)
+    return false;
   while (!clockReady(DividerB));
 
-  clockEnable(SdioClock, &sdClockConfig);
+  clockEnable(SdioClock, &(struct GenericClockConfig){CLOCK_IDIVB});
   while (!clockReady(SdioClock));
 
   /* I2S, I2C */
-  clockEnable(Apb1Clock, &mainClockConfig);
+  clockEnable(Apb1Clock, &(struct GenericClockConfig){CLOCK_PLL});
   while (!clockReady(Apb1Clock));
 
   /* ADC0 */
-  clockEnable(Apb3Clock, &mainClockConfig);
+  clockEnable(Apb3Clock, &(struct GenericClockConfig){CLOCK_PLL});
   while (!clockReady(Apb3Clock));
 
-  clockEnable(Usart0Clock, &mainClockConfig);
-  while (!clockReady(Usart0Clock));
+  /* UART1 */
+  clockEnable(Uart1Clock, &(struct GenericClockConfig){CLOCK_PLL});
+  while (!clockReady(Uart1Clock));
 
-  clockEnable(MainClock, &mainClockConfig);
-
+  clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_PLL});
   return true;
 }

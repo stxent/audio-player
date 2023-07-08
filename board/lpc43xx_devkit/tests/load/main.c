@@ -48,7 +48,8 @@ static void onLoadTimerOverflow(void *argument __attribute__((unused)))
 /*----------------------------------------------------------------------------*/
 int main(void)
 {
-  boardSetupClock();
+  if (!boardLoadClock())
+    boardSetupClock();
 
   struct Interface * const serial = boardMakeSerial();
   assert(serial != NULL);

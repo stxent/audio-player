@@ -37,12 +37,14 @@ SECTIONS
     *(.rodata*)
 
     _etext = .;
+  } >FLASH =0xFF
 
-    . = ALIGN(4);
+  .data_ptr : ALIGN(4)
+  {
     _sidata = .;
   } >FLASH =0xFF
 
-  .data : AT(_sidata) ALIGN(4)
+  .data : ALIGN(4)
   {
     _sdata = .;
 
@@ -50,7 +52,7 @@ SECTIONS
     *(.data*)
 
     _edata = .;
-  } >SRAM0
+  } >SRAM0 AT >FLASH
 
   .bss : ALIGN(4)
   {

@@ -32,6 +32,16 @@ cmake .. -DPLATFORM=LPC43XX -DBOARD=lpc43xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/x
 make
 ```
 
+Build release version for flashless LPC43xx parts with first-stage external
+NOR Flash bootloader (LTO should be disabled at all times):
+
+```sh
+mkdir build
+cd build
+cmake .. -DPLATFORM=LPC43XX -DBOARD=lpc43xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/xcore/toolchains/cortex-m4.cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_MP3=ON -DUSE_DFU=ON -DUSE_LTO=OFF -DUSE_NOR=ON -DUSE_WDT=ON
+make
+```
+
 All firmwares are placed in a *board* directory inside the *build* directory. The Application firmware is placed in an application.hex file and may be flashed using a preferred tool, for example LPC-Link or J-Link. Versions for a DFU must be loaded using dfu-util (root access may be required):
 
 ```sh

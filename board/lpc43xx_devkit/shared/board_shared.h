@@ -78,6 +78,7 @@ struct Interface *boardMakeSDMMC(void);
 struct Interface *boardMakeSerial(void);
 struct Watchdog *boardMakeWatchdog(void);
 
+bool boardLoadClock(void);
 bool boardSetupAnalogPackage(struct AnalogPackage *);
 bool boardSetupButtonPackage(struct ButtonPackage *);
 bool boardSetupCodecPackage(struct CodecPackage *);

@@ -43,7 +43,13 @@ void appBoardCheckBoot(struct Board *board)
 /*----------------------------------------------------------------------------*/
 void appBoardInit(struct Board *board)
 {
-  bool ready = boardSetupClock();
+  bool ready;
+
+#ifdef ENABLE_NOR
+  ready = boardLoadClock();
+#else
+  ready = boardSetupClock();
+#endif
 
 #ifdef ENABLE_WDT
   /* Enable watchdog prior to all other peripherals */

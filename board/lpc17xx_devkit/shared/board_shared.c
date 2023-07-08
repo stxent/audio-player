@@ -39,135 +39,6 @@
 #define PRI_TIMER_SYS 0
 /* WQ_LP 0 */
 /*----------------------------------------------------------------------------*/
-static const PinNumber adcPinArray[] = {
-    BOARD_ADC_PIN,
-    0
-};
-
-static const struct AdcDmaConfig adcConfig = {
-    .pins = adcPinArray,
-    .frequency = 400000,
-    .event = ADC_TIMER1_MAT1,
-    .channel = 0,
-    .dma = 4
-};
-
-static const struct SimpleGpioBusConfig busConfig = {
-    .pins = (const PinNumber []){
-        BOARD_BUTTON_1_PIN,
-        BOARD_BUTTON_2_PIN,
-        BOARD_BUTTON_3_PIN,
-        BOARD_BUTTON_4_PIN,
-        0
-    },
-    .direction = PIN_INPUT,
-    .pull = PIN_PULLUP
- };
-
-static const struct GpTimerConfig adcTimerConfig = {
-    .frequency = 1000000,
-    .event = GPTIMER_MATCH1,
-    .channel = 1
-};
-
-static const struct GpTimerConfig codecTimerConfig = {
-    .frequency = 1000000,
-    .priority = PRI_TIMER_I2C,
-    .channel = 2
-};
-
-static const struct GpTimerConfig loadTimerConfig = {
-    .frequency = 1000000,
-    .priority = PRI_TIMER_DBG,
-    .channel = 3
-};
-
-static const struct GpTimerConfig memoryTimerConfig = {
-    .frequency = 1000000,
-    .priority = PRI_TIMER_MEM,
-    .channel = 0
-};
-
-static const struct I2CConfig i2cConfig = {
-    .rate = 400000, /* Initial rate */
-    .scl = PIN(0, 11),
-    .sda = PIN(0, 10),
-    .priority = PRI_I2C,
-    .channel = 2
-};
-
-static const struct I2SDmaConfig i2sConfig = {
-    .size = 2,
-    .rate = 44100,
-    .width = I2S_WIDTH_16,
-    .tx = {
-        .sda = PIN(0, 9),
-        .sck = PIN(0, 7),
-        .ws = PIN(0, 8),
-        .mclk = BOARD_CODEC_CLOCK_PIN,
-        .dma = 0
-    },
-    .rx = {
-        .sda = PIN(0, 6),
-        .dma = 1
-    },
-    .priority = PRI_I2S,
-    .channel = 0,
-    .mono = false,
-    .slave = false
-};
-
-static const struct SerialConfig serialConfig = {
-    .rxLength = 16,
-    .txLength = 128,
-    .rate = 115200,
-    .rx = PIN(0, 16),
-    .tx = PIN(0, 15),
-    .priority = PRI_SERIAL,
-    .channel = 1
-};
-
-#ifdef ENABLE_SPI_DMA
-static const struct SpiDmaConfig spiConfig = {
-    .rate = 25000000,
-    .miso = PIN(0, 17),
-    .mosi = PIN(0, 18),
-    .sck = PIN(1, 20),
-    .channel = 0,
-    .mode = 3,
-    .dma = {2, 3}
-};
-#else
-static const struct SpiConfig spiConfig[] = {
-    .rate = 25000000,
-    .miso = PIN(0, 17),
-    .mosi = PIN(0, 18),
-    .sck = PIN(1, 20),
-    .priority = PRI_SPI,
-    .channel = 0,
-    .mode = 3
-};
-#endif
-
-static const struct WdtConfig wdtConfig = {
-    .period = 1000,
-    .source = WDT_CLOCK_PCLK
-};
-/*----------------------------------------------------------------------------*/
-static const struct ExternalOscConfig extOscConfig = {
-    .frequency = 12000000
-};
-
-static const struct PllConfig sysPllConfig = {
-    .source = CLOCK_EXTERNAL,
-    .divisor = 3,
-    .multiplier = 25
-};
-
-static const struct GenericClockConfig mainClockConfig = {
-    .source = CLOCK_PLL
-};
-/*----------------------------------------------------------------------------*/
 struct Entity *boardMakeAmp(struct Interface *i2c, struct Timer *timer)
 {
   const struct AmplifierConfig ampConfig = {
@@ -196,16 +67,34 @@ struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeCodecTimer(void)
 {
+  static const struct GpTimerConfig codecTimerConfig = {
+      .frequency = 1000000,
+      .priority = PRI_TIMER_I2C,
+      .channel = 2
+  };
+
   return init(GpTimer, &codecTimerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeLoadTimer(void)
 {
+  static const struct GpTimerConfig loadTimerConfig = {
+      .frequency = 1000000,
+      .priority = PRI_TIMER_DBG,
+      .channel = 3
+  };
+
   return init(GpTimer, &loadTimerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeMemoryTimer(void)
 {
+  static const struct GpTimerConfig memoryTimerConfig = {
+      .frequency = 1000000,
+      .priority = PRI_TIMER_MEM,
+      .channel = 0
+  };
+
   return init(GpTimer, &memoryTimerConfig);
 }
 /*----------------------------------------------------------------------------*/
@@ -216,11 +105,40 @@ struct Timer *boardMakeMountTimer(void)
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2C(void)
 {
+  static const struct I2CConfig i2cConfig = {
+      .rate = 400000, /* Initial rate */
+      .scl = PIN(0, 11),
+      .sda = PIN(0, 10),
+      .priority = PRI_I2C,
+      .channel = 2
+  };
+
   return init(I2C, &i2cConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2S(void)
 {
+  static const struct I2SDmaConfig i2sConfig = {
+      .size = 2,
+      .rate = 44100,
+      .width = I2S_WIDTH_16,
+      .tx = {
+          .sda = PIN(0, 9),
+          .sck = PIN(0, 7),
+          .ws = PIN(0, 8),
+          .mclk = BOARD_CODEC_CLOCK_PIN,
+          .dma = 0
+      },
+      .rx = {
+          .sda = PIN(0, 6),
+          .dma = 1
+      },
+      .priority = PRI_I2S,
+      .channel = 0,
+      .mono = false,
+      .slave = false
+  };
+
   return init(I2SDma, &i2sConfig);
 }
 /*----------------------------------------------------------------------------*/
@@ -239,25 +157,77 @@ struct Interface *boardMakeSDIO(struct Interface *spi, struct Timer *timer)
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeSerial(void)
 {
+  static const struct SerialConfig serialConfig = {
+      .rxLength = 16,
+      .txLength = 128,
+      .rate = 115200,
+      .rx = PIN(0, 16),
+      .tx = PIN(0, 15),
+      .priority = PRI_SERIAL,
+      .channel = 1
+  };
+
   return init(Serial, &serialConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeSPI(void)
 {
 #ifdef ENABLE_SPI_DMA
+  static const struct SpiDmaConfig spiConfig = {
+      .rate = 25000000,
+      .miso = PIN(0, 17),
+      .mosi = PIN(0, 18),
+      .sck = PIN(1, 20),
+      .channel = 0,
+      .mode = 3,
+      .dma = {2, 3}
+  };
+
   return init(SpiDma, &spiConfig);
 #else
+  static const struct SpiConfig spiConfig[] = {
+      .rate = 25000000,
+      .miso = PIN(0, 17),
+      .mosi = PIN(0, 18),
+      .sck = PIN(1, 20),
+      .priority = PRI_SPI,
+      .channel = 0,
+      .mode = 3
+  };
+
   return init(Spi, &spiConfig);
 #endif
 }
 /*----------------------------------------------------------------------------*/
 struct Watchdog *boardMakeWatchdog(void)
 {
+  static const struct WdtConfig wdtConfig = {
+      .period = 1000,
+      .source = WDT_CLOCK_PCLK
+  };
+
   return init(Wdt, &wdtConfig);
 }
 /*----------------------------------------------------------------------------*/
 bool boardSetupAnalogPackage(struct AnalogPackage *package)
 {
+  static const PinNumber adcPins[] = {
+      BOARD_ADC_PIN,
+      0
+  };
+  static const struct AdcDmaConfig adcConfig = {
+      .pins = adcPins,
+      .frequency = 400000,
+      .event = ADC_TIMER1_MAT1,
+      .channel = 0,
+      .dma = 4
+  };
+  static const struct GpTimerConfig adcTimerConfig = {
+      .frequency = 1000000,
+      .event = GPTIMER_MATCH1,
+      .channel = 1
+  };
+
   package->timer = NULL;
 
   package->adc = init(AdcDma, &adcConfig);
@@ -281,6 +251,19 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
 /*----------------------------------------------------------------------------*/
 bool boardSetupButtonPackage(struct ButtonPackage *package)
 {
+  static const PinNumber busPins[] = {
+      BOARD_BUTTON_1_PIN,
+      BOARD_BUTTON_2_PIN,
+      BOARD_BUTTON_3_PIN,
+      BOARD_BUTTON_4_PIN,
+      0
+  };
+  static const struct SimpleGpioBusConfig busConfig = {
+      .pins = busPins,
+      .direction = PIN_INPUT,
+      .pull = PIN_PULLUP
+  };
+
   package->timer = NULL;
 
   package->buttons = init(SimpleGpioBus, &busConfig);
@@ -353,6 +336,15 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
 /*----------------------------------------------------------------------------*/
 bool boardSetupClock(void)
 {
+  static const struct ExternalOscConfig extOscConfig = {
+      .frequency = 12000000
+  };
+  static const struct PllConfig sysPllConfig = {
+      .source = CLOCK_EXTERNAL,
+      .divisor = 3,
+      .multiplier = 25
+  };
+
   if (clockEnable(ExternalOsc, &extOscConfig) != E_OK)
     return false;
   while (!clockReady(ExternalOsc));
@@ -361,8 +353,6 @@ bool boardSetupClock(void)
     return false;
   while (!clockReady(SystemPll));
 
-  if (clockEnable(MainClock, &mainClockConfig) != E_OK)
-    return false;
-
+  clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_PLL});
   return true;
 }

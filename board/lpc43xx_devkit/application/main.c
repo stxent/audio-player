@@ -6,12 +6,60 @@
 
 #include "board.h"
 #include "tasks.h"
+#include <halm/core/cortex/nvic.h>
+#include <halm/platform/lpc/clocking.h>
 #include <xcore/interface.h>
 #include <stdio.h>
 #include <stdlib.h>
 /*----------------------------------------------------------------------------*/
+extern unsigned long _slibs;
+extern unsigned long _elibs;
+extern unsigned long _silibs;
+/*----------------------------------------------------------------------------*/
+#ifdef ENABLE_NOR
+static void loadLibraryCode(void)
+{
+  register unsigned long *dst __asm__ ("r0");
+  register unsigned long *src __asm__ ("r1");
+
+  /* Copy the library segment initializers from flash to RAM */
+  for (dst = &_slibs, src = &_silibs; dst < &_elibs;)
+    *dst++ = *src++;
+}
+#endif
+/*----------------------------------------------------------------------------*/
+#ifdef ENABLE_DBG
+static void showClockFrequencies(struct Interface *serial)
+{
+  uint32_t frequency;
+  size_t count;
+  char text[64];
+
+  frequency = clockFrequency(ExternalOsc);
+  count = sprintf(text, "XTAL  %lu\r\n", (unsigned long)frequency);
+  ifWrite(serial, text, count);
+
+  frequency = clockFrequency(MainClock);
+  count = sprintf(text, "MAIN  %lu\r\n", (unsigned long)frequency);
+  ifWrite(serial, text, count);
+
+  frequency = clockFrequency(SpifiClock);
+  count = sprintf(text, "SPIFI %lu\r\n", (unsigned long)frequency);
+  ifWrite(serial, text, count);
+
+  frequency = clockFrequency(SystemPll);
+  count = sprintf(text, "PLL   %lu\r\n", (unsigned long)frequency);
+  ifWrite(serial, text, count);
+}
+#endif
+/*----------------------------------------------------------------------------*/
 int main(void)
 {
+#ifdef ENABLE_NOR
+  loadLibraryCode();
+  nvicSetVectorTableOffset((uint32_t)&_slibs);
+#endif
+
   struct Board * const board = malloc(sizeof(struct Board));
   appBoardInit(board);
 
@@ -21,11 +69,20 @@ int main(void)
 
 #ifdef ENABLE_DBG
   /*
-   * 20399986 for 204 MHz
+   * 20399993 for 204 MHz
+   * 10199993 for 102 MHz
    *  5099992 for  51 MHz
    */
+#  ifdef ENABLE_NOR
+  board->debug.idle = 10199993;
+#  else
   board->debug.idle = 5099992;
-#endif
+#  endif /* ENABLE_NOR */
+
+#  ifdef ENABLE_NOR
+  showClockFrequencies(board->system.serial);
+#  endif
+#endif /* ENABLE_DBG */
 
   invokeStartupTask(board);
   return appBoardStart(board);

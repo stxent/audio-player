@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 xent
+ * Copyright (C) 2023 xent
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
 
@@ -37,18 +37,28 @@ MEMORY
 
 SECTIONS
 {
-  .text : ALIGN(4)
+  .shared : ALIGN(4)
+  {
+    *(.shared)
+    *(.shared*)
+  } >SRAM1
+
+  .libs_ptr : ALIGN(4)
+  {
+    _silibs = .;
+  } >FLASH =0xFF
+
+  .libs : ALIGN(4)
   {
     _stext = .;
+    _slibs = .;
 
     *(.vectors)
-    *(.text)
-    *(.text*)
-    *(.rodata)
-    *(.rodata*)
+    *libhelix_mp3.a:*(.text)
+    *libhelix_mp3.a:*(.text*)
 
-    _etext = .;
-  } >FLASH =0xFF
+    _elibs = .;
+  } >SRAM0 AT >FLASH
 
   .data_ptr : ALIGN(4)
   {
@@ -64,6 +74,16 @@ SECTIONS
 
     _edata = .;
   } >SRAM1 AT >FLASH
+
+  .text_all : ALIGN(4)
+  {
+    *(.text)
+    *(.text*)
+    *(.rodata)
+    *(.rodata*)
+
+    _etext = .;
+  } >FLASH =0xFF
 
   .bss : ALIGN(4)
   {
