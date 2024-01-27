@@ -15,10 +15,9 @@ static void onTimerOverflow(void *argument)
 /*----------------------------------------------------------------------------*/
 int main(void)
 {
-  if (!boardLoadClock())
-    boardSetupClock();
-
   bool event = false;
+
+  boardSetupClock();
 
   const struct Pin led = pinInit(BOARD_LED_R_PIN);
   pinOutput(led, true);

@@ -20,6 +20,6 @@ static I2STxBuffer txBuffersData[I2S_BUFFER_COUNT]
 void *txBuffers = txBuffersData;
 /*----------------------------------------------------------------------------*/
 /* Total: 8192 bytes */
-static FilePath trackBufferData[TRACK_COUNT]
+static FilePath trackBuffersData[TRACK_COUNT]
     __attribute__((section(".sram2")));
-void *trackBuffers = trackBufferData;
+void *trackBuffers = trackBuffersData;

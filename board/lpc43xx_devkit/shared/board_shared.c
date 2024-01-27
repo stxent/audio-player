@@ -10,7 +10,7 @@
 #include <dpm/bus_handler.h>
 #include <dpm/button.h>
 #include <halm/core/cortex/systick.h>
-#include <halm/generic/software_timer.h>
+#include <halm/generic/timer_factory.h>
 #include <halm/gpio_bus.h>
 #include <halm/platform/lpc/adc_dma.h>
 #include <halm/platform/lpc/clocking.h>
@@ -170,11 +170,6 @@ struct Watchdog *boardMakeWatchdog(void)
   return init(Wdt, &wdtConfig);
 }
 /*----------------------------------------------------------------------------*/
-bool boardLoadClock(void)
-{
-  return loadClockSettings(&sharedClockSettings);
-}
-/*----------------------------------------------------------------------------*/
 bool boardSetupAnalogPackage(struct AnalogPackage *package)
 {
   static const PinNumber adcPins[] = {
@@ -262,21 +257,21 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
   timerSetOverflow(package->baseTimer,
       timerGetFrequency(package->baseTimer) / 1000);
 
-  const struct SoftwareTimerFactoryConfig timerFactoryConfig = {
+  const struct TimerFactoryConfig timerFactoryConfig = {
       .timer = package->baseTimer
   };
-  package->factory = init(SoftwareTimerFactory, &timerFactoryConfig);
+  package->factory = init(TimerFactory, &timerFactoryConfig);
   if (package->factory == NULL)
     return false;
 
-  package->ampTimer = softwareTimerCreate(package->factory);
+  package->ampTimer = timerFactoryCreate(package->factory);
   if (package->ampTimer == NULL)
     return false;
   package->amp = boardMakeAmp(package->i2c, package->ampTimer);
   if (package->amp == NULL)
     return false;
 
-  package->codecTimer = softwareTimerCreate(package->factory);
+  package->codecTimer = timerFactoryCreate(package->factory);
   if (package->codecTimer == NULL)
     return false;
   package->codec = boardMakeCodec(package->i2c, package->codecTimer);
@@ -298,34 +293,45 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
 /*----------------------------------------------------------------------------*/
 bool boardSetupClock(void)
 {
-  static const struct GenericDividerConfig divConfig = {
-      .source = CLOCK_PLL,
-      .divisor = 1
-  };
   static const struct ExternalOscConfig extOscConfig = {
       .frequency = 12000000
   };
   static const struct PllConfig sysPllConfig = {
-      .source = CLOCK_EXTERNAL,
       .divisor = 4,
-      .multiplier = 17
+      .multiplier = 17,
+      .source = CLOCK_EXTERNAL
+  };
+  static const uint32_t SDIO_MAX_FREQUENCY = 51000000;
+
+  const bool loaded = loadClockSettings(&sharedClockSettings);
+
+  if (!loaded)
+  {
+    clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_INTERNAL});
+
+    if (clockEnable(ExternalOsc, &extOscConfig) != E_OK)
+      return false;
+    while (!clockReady(ExternalOsc));
+
+    if (clockEnable(SystemPll, &sysPllConfig) != E_OK)
+      return false;
+    while (!clockReady(SystemPll));
+  }
+
+  /* Divider D may be used by bootloader to configure SPIM clock */
+
+  /* SDIO */
+  const uint32_t frequency = clockFrequency(SystemPll);
+  const struct GenericDividerConfig divConfig = {
+      .divisor = (frequency + SDIO_MAX_FREQUENCY - 1) / SDIO_MAX_FREQUENCY,
+      .source = CLOCK_PLL
   };
 
-  clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_INTERNAL});
-
-  if (clockEnable(ExternalOsc, &extOscConfig) != E_OK)
+  if (clockEnable(DividerC, &divConfig) != E_OK)
     return false;
-  while (!clockReady(ExternalOsc));
+  while (!clockReady(DividerC));
 
-  if (clockEnable(SystemPll, &sysPllConfig) != E_OK)
-    return false;
-  while (!clockReady(SystemPll));
-
-  if (clockEnable(DividerB, &divConfig) != E_OK)
-    return false;
-  while (!clockReady(DividerB));
-
-  clockEnable(SdioClock, &(struct GenericClockConfig){CLOCK_IDIVB});
+  clockEnable(SdioClock, &(struct GenericClockConfig){CLOCK_IDIVC});
   while (!clockReady(SdioClock));
 
   /* I2S, I2C */
@@ -340,6 +346,8 @@ bool boardSetupClock(void)
   clockEnable(Uart1Clock, &(struct GenericClockConfig){CLOCK_PLL});
   while (!clockReady(Uart1Clock));
 
-  clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_PLL});
+  if (!loaded)
+    clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_PLL});
+
   return true;
 }

@@ -8,7 +8,7 @@ EXTERN(vectorTable)
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = ${FLASH_ORIGIN}, LENGTH = ${FLASH_LENGTH}
+  ROM (rx)   : ORIGIN = ${ROM_ORIGIN}, LENGTH = ${ROM_LENGTH}
   EEPROM (r) : ORIGIN = 0x20040000, LENGTH = 16K - 128
 
   AHB (rw)   : ORIGIN = 0x40000000, LENGTH = 72K
@@ -24,9 +24,9 @@ MEMORY
   PPB (rw)   : ORIGIN = 0xE0000000, LENGTH = 1M
 
   /* Local SRAM */
-  SRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 32K - 32
+  SRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 32K
   /* Local SRAM */
-  SRAM1 (rwx) : ORIGIN = 0x10080000, LENGTH = 40K
+  SRAM1 (rwx) : ORIGIN = 0x10080000, LENGTH = 40K - 32
   /* AHB SRAM */
   SRAM2 (rwx) : ORIGIN = 0x20000000, LENGTH = 32K
   /* AHB SRAM */
@@ -48,12 +48,12 @@ SECTIONS
     *(.rodata*)
 
     _etext = .;
-  } >FLASH =0xFF
+  } >ROM =0xFF
 
   .data_ptr : ALIGN(4)
   {
     _sidata = .;
-  } >FLASH =0xFF
+  } >ROM =0xFF
 
   .data : ALIGN(4)
   {
@@ -63,7 +63,7 @@ SECTIONS
     *(.data*)
 
     _edata = .;
-  } >SRAM1 AT >FLASH
+  } >SRAM1 AT >ROM
 
   .bss : ALIGN(4)
   {
@@ -79,19 +79,19 @@ SECTIONS
     heapStart = .;
   } >SRAM1
 
-  .sram2 : ALIGN(4)
+  .sram2 (NOLOAD) : ALIGN(4)
   {
     *(.sram2)
     *(.sram2*)
   } >SRAM2
 
-  .sram3 : ALIGN(4)
+  .sram3 (NOLOAD) : ALIGN(4)
   {
     *(.sram3)
     *(.sram3*)
   } >SRAM3
 
-  .sram4 : ALIGN(4)
+  .sram4 (NOLOAD) : ALIGN(4)
   {
     *(.sram4)
     *(.sram4*)

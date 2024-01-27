@@ -8,7 +8,7 @@ EXTERN(vectorTable)
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = ${FLASH_ORIGIN}, LENGTH = ${FLASH_LENGTH}
+  ROM (rx)   : ORIGIN = ${ROM_ORIGIN}, LENGTH = ${ROM_LENGTH}
 
   GPIO (rw)  : ORIGIN = 0x2009C000, LENGTH = 16K
   APB0 (rw)  : ORIGIN = 0x40000000, LENGTH = 512K
@@ -37,12 +37,12 @@ SECTIONS
     *(.rodata*)
 
     _etext = .;
-  } >FLASH =0xFF
+  } >ROM =0xFF
 
   .data_ptr : ALIGN(4)
   {
     _sidata = .;
-  } >FLASH =0xFF
+  } >ROM =0xFF
 
   .data : ALIGN(4)
   {
@@ -52,7 +52,7 @@ SECTIONS
     *(.data*)
 
     _edata = .;
-  } >SRAM0 AT >FLASH
+  } >SRAM0 AT >ROM
 
   .bss : ALIGN(4)
   {
@@ -65,13 +65,13 @@ SECTIONS
     _ebss = .;
   } >SRAM0
 
-  .sram1 : ALIGN(4)
+  .sram1 (NOLOAD) : ALIGN(4)
   {
     *(.sram1)
     *(.sram1*)
   } >SRAM1
 
-  .sram2 : ALIGN(4)
+  .sram2 (NOLOAD) : ALIGN(4)
   {
     *(.sram2)
     *(.sram2*)

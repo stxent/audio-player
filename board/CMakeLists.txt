@@ -62,7 +62,8 @@ foreach(EXECUTABLE_NAME ${EXECUTABLES})
 
     add_executable(${EXECUTABLE_ARTIFACT} ${${EXECUTABLE_NAME}_SOURCES})
     target_include_directories(${EXECUTABLE_ARTIFACT} PRIVATE ${EXECUTABLE_NAME}_DIR)
-    target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE core dpm yaf ${FLAGS_LINKER})
+    target_link_options(${EXECUTABLE_ARTIFACT} PRIVATE SHELL:${FLAGS_CPU} SHELL:${FLAGS_LINKER})
+    target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE core dpm yaf)
 
     if(TARGET shared)
         target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE shared)
@@ -86,13 +87,13 @@ foreach(EXECUTABLE_NAME ${EXECUTABLES})
             add_test(${EXECUTABLE_NAME} ${EXECUTABLE_ARTIFACT})
         endif()
     else()
-        target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE -T"${PROJECT_BINARY_DIR}/memory.ld")
+        target_link_options(${EXECUTABLE_ARTIFACT} PRIVATE SHELL:-T"${PROJECT_BINARY_DIR}/memory.ld")
 
         add_custom_command(TARGET ${EXECUTABLE_ARTIFACT} POST_BUILD
-                COMMAND "${CMAKE_OBJCOPY}" ${EXECUTABLE_ARTIFACT} ${FLAGS_OBJCOPY} -Obinary ${EXECUTABLE_NAME}.bin
+                COMMAND "${CMAKE_OBJCOPY}" ${EXECUTABLE_ARTIFACT} -Obinary ${EXECUTABLE_NAME}.bin
         )
         add_custom_command(TARGET ${EXECUTABLE_ARTIFACT} POST_BUILD
-                COMMAND "${CMAKE_OBJCOPY}" ${EXECUTABLE_ARTIFACT} ${FLAGS_OBJCOPY} -Oihex ${EXECUTABLE_NAME}.hex
+                COMMAND "${CMAKE_OBJCOPY}" ${EXECUTABLE_ARTIFACT} -Oihex ${EXECUTABLE_NAME}.hex
         )
     endif()
 endforeach()

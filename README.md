@@ -42,7 +42,7 @@ cmake .. -DPLATFORM=LPC43XX -DBOARD=lpc43xx_devkit -DCMAKE_TOOLCHAIN_FILE=libs/x
 make
 ```
 
-All firmwares are placed in a *board* directory inside the *build* directory. The Application firmware is placed in an application.hex file and may be flashed using a preferred tool, for example LPC-Link or J-Link. Versions for a DFU must be loaded using dfu-util (root access may be required):
+All firmwares are placed in a *board* directory inside the *build* directory. The Application firmware is placed in an application.bin file and may be flashed using a preferred tool, for example LPC-Link or J-Link. Versions for a DFU must be loaded using dfu-util (root access may be required):
 
 ```sh
 dfu-util -R -D application.bin
@@ -55,4 +55,5 @@ Useful settings
 * USE_DBG — enables debug messages and profiling.
 * USE_DFU — links application and test firmwares using DFU memory layout even in Debug and RelWithDebInfo modes.
 * USE_LTO — enables Link Time Optimization.
+* USE_NOR — places application and test firmwares in the NOR Flash instead of the internal Flash.
 * USE_WDT — explicitly enables a watchdog timer for all build types.

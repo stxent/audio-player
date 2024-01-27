@@ -10,7 +10,7 @@
 #include <dpm/button.h>
 #include <halm/core/cortex/systick.h>
 #include <halm/generic/sdio_spi.h>
-#include <halm/generic/software_timer.h>
+#include <halm/generic/timer_factory.h>
 #include <halm/gpio_bus.h>
 #include <halm/platform/lpc/adc_dma.h>
 #include <halm/platform/lpc/clocking.h>
@@ -300,21 +300,21 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
   timerSetOverflow(package->baseTimer,
       timerGetFrequency(package->baseTimer) / 1000);
 
-  const struct SoftwareTimerFactoryConfig timerFactoryConfig = {
+  const struct TimerFactoryConfig timerFactoryConfig = {
       .timer = package->baseTimer
   };
-  package->factory = init(SoftwareTimerFactory, &timerFactoryConfig);
+  package->factory = init(TimerFactory, &timerFactoryConfig);
   if (package->factory == NULL)
     return false;
 
-  package->ampTimer = softwareTimerCreate(package->factory);
+  package->ampTimer = timerFactoryCreate(package->factory);
   if (package->ampTimer == NULL)
     return false;
   package->amp = boardMakeAmp(package->i2c, package->ampTimer);
   if (package->amp == NULL)
     return false;
 
-  package->codecTimer = softwareTimerCreate(package->factory);
+  package->codecTimer = timerFactoryCreate(package->factory);
   if (package->codecTimer == NULL)
     return false;
   package->codec = boardMakeCodec(package->i2c, package->codecTimer);

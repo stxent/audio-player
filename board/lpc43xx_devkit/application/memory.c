@@ -12,7 +12,7 @@ typedef uint8_t I2STxBuffer[I2S_TX_BUFFER_LENGTH];
 /*----------------------------------------------------------------------------*/
 /* Total: 13824 bytes */
 static I2SRxBuffer rxBuffersData[I2S_BUFFER_COUNT]
-    __attribute__((section(".sram3")));
+    __attribute__((section(".sram4")));
 void *rxBuffers = rxBuffersData;
 /*----------------------------------------------------------------------------*/
 /* Total: 27648 bytes */
@@ -21,6 +21,6 @@ static I2STxBuffer txBuffersData[I2S_BUFFER_COUNT]
 void *txBuffers = txBuffersData;
 /*----------------------------------------------------------------------------*/
 /* Total: 16384 bytes */
-static FilePath trackBufferData[TRACK_COUNT]
-    __attribute__((section(".sram4")));
-void *trackBuffers = trackBufferData;
+static FilePath trackBuffersData[TRACK_COUNT]
+    __attribute__((section(".sram3")));
+void *trackBuffers = trackBuffersData;

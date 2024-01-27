@@ -69,15 +69,12 @@ int main(void)
 
 #ifdef ENABLE_DBG
   /*
-   * 20399993 for 204 MHz
-   * 10199993 for 102 MHz
-   *  5099992 for  51 MHz
+   * Calculate estimate idle cycles. Test results are:
+   *   20399993 for 204 MHz
+   *   10199993 for 102 MHz
+   *    5099992 for  51 MHz
    */
-#  ifdef ENABLE_NOR
-  board->debug.idle = 10199993;
-#  else
-  board->debug.idle = 5099992;
-#  endif /* ENABLE_NOR */
+  board->debug.idle = clockFrequency(MainClock) / 10;
 
 #  ifdef ENABLE_NOR
   showClockFrequencies(board->system.serial);
