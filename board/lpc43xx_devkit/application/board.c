@@ -116,7 +116,7 @@ void appBoardInit(struct Board *board)
   (void)ready;
 }
 /*----------------------------------------------------------------------------*/
-int appBoardStart(struct Board *board __attribute__((unused)))
+int appBoardStart(struct Board *)
 {
   wqStart(WQ_LP);
   wqStart(WQ_DEFAULT);

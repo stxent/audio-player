@@ -6,6 +6,9 @@
 ENTRY(RESET_ISR)
 EXTERN(vectorTable)
 
+/* Suppress newlib warnings */
+EXTERN(__assert_func)
+
 MEMORY
 {
   ROM (rx)   : ORIGIN = ${ROM_ORIGIN}, LENGTH = ${ROM_LENGTH}

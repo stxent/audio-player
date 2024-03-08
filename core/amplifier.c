@@ -11,7 +11,7 @@
 #include <halm/timer.h>
 #include <assert.h>
 /*----------------------------------------------------------------------------*/
-enum State
+enum [[gnu::packed]] State
 {
   STATE_IDLE,
 
@@ -23,7 +23,7 @@ enum State
   STATE_ERROR_WAIT,
   STATE_ERROR_INTERFACE,
   STATE_ERROR_TIMEOUT
-} __attribute__((packed));
+};
 /*----------------------------------------------------------------------------*/
 static void busInit(struct Amplifier *, bool);
 static void invokeUpdate(struct Amplifier *);

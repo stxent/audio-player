@@ -5,8 +5,8 @@
  */
 
 #ifdef CONFIG_ENABLE_MP3
-  #include "mp3common.h"
-  #include "mp3dec.h"
+#  include "mp3common.h"
+#  include "mp3dec.h"
 #endif
 
 #include "player.h"
@@ -308,14 +308,11 @@ static bool isReservedName(const char *name)
   return name[0] == '.' && (!name[1] || (name[1] == '.' && !name[2]));
 }
 /*----------------------------------------------------------------------------*/
-static void mockControlCallback(void *argument __attribute__((unused)),
-    uint32_t rate __attribute__((unused)),
-    uint8_t channels __attribute__((unused)))
+static void mockControlCallback(void *, uint32_t, uint8_t)
 {
 }
 /*----------------------------------------------------------------------------*/
-static void mockStateCallback(void *argument __attribute__((unused)),
-    enum PlayerState state __attribute__((unused)))
+static void mockStateCallback(void *, enum PlayerState)
 {
 }
 /*----------------------------------------------------------------------------*/

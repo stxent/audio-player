@@ -211,8 +211,7 @@ static void onMountTimerEvent(void *argument)
   }
 }
 /*----------------------------------------------------------------------------*/
-static void onPlayerFormatChanged(void *argument, uint32_t rate,
-    uint8_t channels __attribute__((unused)))
+static void onPlayerFormatChanged(void *argument, uint32_t rate, uint8_t)
 {
   struct Board * const board = argument;
 

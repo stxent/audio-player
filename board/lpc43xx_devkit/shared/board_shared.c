@@ -35,8 +35,7 @@
 #define PRI_TIMER_SYS 0
 /* WQ_LP 0 */
 /*----------------------------------------------------------------------------*/
-static struct ClockSettings sharedClockSettings
-    __attribute__((section(".shared")));
+[[gnu::section(".shared")]] static struct ClockSettings sharedClockSettings;
 /*----------------------------------------------------------------------------*/
 struct Entity *boardMakeAmp(struct Interface *i2c, struct Timer *timer)
 {

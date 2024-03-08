@@ -15,11 +15,9 @@ static I2SRxBuffer rxBuffersData[I2S_BUFFER_COUNT];
 void *rxBuffers = rxBuffersData;
 /*----------------------------------------------------------------------------*/
 /* Total: 13824 bytes */
-static I2STxBuffer txBuffersData[I2S_BUFFER_COUNT]
-    __attribute__((section(".sram1")));
+[[gnu::section(".sram1")]] static I2STxBuffer txBuffersData[I2S_BUFFER_COUNT];
 void *txBuffers = txBuffersData;
 /*----------------------------------------------------------------------------*/
 /* Total: 8192 bytes */
-static FilePath trackBuffersData[TRACK_COUNT]
-    __attribute__((section(".sram2")));
+[[gnu::section(".sram2")]] static FilePath trackBuffersData[TRACK_COUNT];
 void *trackBuffers = trackBuffersData;

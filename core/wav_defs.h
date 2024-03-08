@@ -9,7 +9,7 @@
 /*----------------------------------------------------------------------------*/
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
-struct WavHeader
+struct [[gnu::packed]] WavHeader
 {
   /* The "RIFF" chunk */
   uint32_t chunkId;
@@ -29,6 +29,6 @@ struct WavHeader
   /* The "data" subchunk */
   uint32_t subchunk2Id;
   uint32_t subchunk2Size;
-} __attribute__((packed));
+};
 /*----------------------------------------------------------------------------*/
 #endif /* CORE_WAV_DEFS_H_ */

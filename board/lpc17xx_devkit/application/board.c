@@ -125,7 +125,7 @@ void appBoardInit(struct Board *board)
   playerShuffleControl(&board->player, true);
 }
 /*----------------------------------------------------------------------------*/
-int appBoardStart(struct Board *board __attribute__((unused)))
+int appBoardStart(struct Board *)
 {
   wqStart(WQ_LP);
   wqStart(WQ_DEFAULT);
