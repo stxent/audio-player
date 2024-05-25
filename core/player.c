@@ -417,14 +417,14 @@ static void playTrack(struct Player *player, size_t start, int dir)
 static bool parseHeaderMP3(struct Player *player, struct FsNode *node,
     struct TrackInfo *info)
 {
-  static const FsLength SCAN_LENGTH = 65536;
+  static const FsLength fileScanLength = 65536;
   FsLength headerPosition = 0;
   FsLength length;
 
   if (fsNodeLength(node, FS_NODE_DATA, &length) != E_OK || length == 0)
     return false;
 
-  while (headerPosition < MIN(SCAN_LENGTH, length))
+  while (headerPosition < MIN(fileScanLength, length))
   {
     size_t count;
     enum Result res;
@@ -883,7 +883,7 @@ void playerResetFiles(struct Player *player)
 static void scanNodeDescendants(struct Player *player, struct FsNode *root,
     const char *base, unsigned int level)
 {
-  static const unsigned int MAX_LEVEL = 2;
+  static const unsigned int dirMaxLevel = 2;
   struct FsNode *child = NULL;
 
   for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
@@ -917,7 +917,7 @@ static void scanNodeDescendants(struct Player *player, struct FsNode *root,
 
         fsJoinPaths(path.data, base, name.data);
 
-        if (level < MAX_LEVEL && !isDataFile)
+        if (level < dirMaxLevel && !isDataFile)
         {
           /* Attention to stack size: recursive call */
           scanNodeDescendants(player, child, path.data, level + 1);

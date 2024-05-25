@@ -16,7 +16,7 @@ extern unsigned long _slibs;
 extern unsigned long _elibs;
 extern unsigned long _silibs;
 /*----------------------------------------------------------------------------*/
-#ifdef ENABLE_NOR
+#if defined(ENABLE_NOR)
 static void loadLibraryCode(void)
 {
   register unsigned long *dst __asm__ ("r0");
@@ -28,7 +28,7 @@ static void loadLibraryCode(void)
 }
 #endif
 /*----------------------------------------------------------------------------*/
-#ifdef ENABLE_DBG
+#if defined(ENABLE_NOR) && defined(ENABLE_DBG)
 static void showClockFrequencies(struct Interface *serial)
 {
   uint32_t frequency;

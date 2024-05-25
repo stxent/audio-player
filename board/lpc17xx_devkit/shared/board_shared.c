@@ -278,11 +278,33 @@ bool boardSetupButtonPackage(struct ButtonPackage *package)
   return true;
 }
 /*----------------------------------------------------------------------------*/
-bool boardSetupCodecPackage(struct CodecPackage *package)
+bool boardSetupChronoPackage(struct ChronoPackage *package)
 {
-  package->baseTimer = NULL;
   package->factory = NULL;
+  package->guardTimer = NULL;
 
+  package->timer = boardMakeCodecTimer();
+  if (package->timer == NULL)
+    return false;
+  timerSetOverflow(package->timer, timerGetFrequency(package->timer) / 1000);
+
+  const struct TimerFactoryConfig timerFactoryConfig = {
+      .timer = package->timer
+  };
+  package->factory = init(TimerFactory, &timerFactoryConfig);
+  if (package->factory == NULL)
+    return false;
+
+  package->guardTimer = timerFactoryCreate(package->factory);
+  if (package->guardTimer == NULL)
+    return false;
+
+  return true;
+}
+/*----------------------------------------------------------------------------*/
+bool boardSetupCodecPackage(struct CodecPackage *package,
+    struct TimerFactory *factory)
+{
   package->ampTimer = NULL;
   package->amp = NULL;
   package->codecTimer = NULL;
@@ -292,29 +314,14 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
   if (package->i2c == NULL)
     return false;
 
-  package->factory = 0;
-
-  package->baseTimer = boardMakeCodecTimer();
-  if (package->baseTimer == NULL)
-    return false;
-  timerSetOverflow(package->baseTimer,
-      timerGetFrequency(package->baseTimer) / 1000);
-
-  const struct TimerFactoryConfig timerFactoryConfig = {
-      .timer = package->baseTimer
-  };
-  package->factory = init(TimerFactory, &timerFactoryConfig);
-  if (package->factory == NULL)
-    return false;
-
-  package->ampTimer = timerFactoryCreate(package->factory);
+  package->ampTimer = timerFactoryCreate(factory);
   if (package->ampTimer == NULL)
     return false;
   package->amp = boardMakeAmp(package->i2c, package->ampTimer);
   if (package->amp == NULL)
     return false;
 
-  package->codecTimer = timerFactoryCreate(package->factory);
+  package->codecTimer = timerFactoryCreate(factory);
   if (package->codecTimer == NULL)
     return false;
   package->codec = boardMakeCodec(package->i2c, package->codecTimer);

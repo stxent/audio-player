@@ -10,6 +10,7 @@
 #include <dpm/bus_handler.h>
 #include <dpm/button.h>
 #include <halm/core/cortex/systick.h>
+#include <halm/delay.h>
 #include <halm/generic/timer_factory.h>
 #include <halm/gpio_bus.h>
 #include <halm/platform/lpc/adc_dma.h>
@@ -234,11 +235,33 @@ bool boardSetupButtonPackage(struct ButtonPackage *package)
   return true;
 }
 /*----------------------------------------------------------------------------*/
-bool boardSetupCodecPackage(struct CodecPackage *package)
+bool boardSetupChronoPackage(struct ChronoPackage *package)
 {
-  package->baseTimer = NULL;
   package->factory = NULL;
+  package->guardTimer = NULL;
 
+  package->timer = boardMakeCodecTimer();
+  if (package->timer == NULL)
+    return false;
+  timerSetOverflow(package->timer, timerGetFrequency(package->timer) / 1000);
+
+  const struct TimerFactoryConfig timerFactoryConfig = {
+      .timer = package->timer
+  };
+  package->factory = init(TimerFactory, &timerFactoryConfig);
+  if (package->factory == NULL)
+    return false;
+
+  package->guardTimer = timerFactoryCreate(package->factory);
+  if (package->guardTimer == NULL)
+    return false;
+
+  return true;
+}
+/*----------------------------------------------------------------------------*/
+bool boardSetupCodecPackage(struct CodecPackage *package,
+    struct TimerFactory *factory)
+{
   package->ampTimer = NULL;
   package->amp = NULL;
   package->codecTimer = NULL;
@@ -248,29 +271,14 @@ bool boardSetupCodecPackage(struct CodecPackage *package)
   if (package->i2c == NULL)
     return false;
 
-  package->factory = 0;
-
-  package->baseTimer = boardMakeCodecTimer();
-  if (package->baseTimer == NULL)
-    return false;
-  timerSetOverflow(package->baseTimer,
-      timerGetFrequency(package->baseTimer) / 1000);
-
-  const struct TimerFactoryConfig timerFactoryConfig = {
-      .timer = package->baseTimer
-  };
-  package->factory = init(TimerFactory, &timerFactoryConfig);
-  if (package->factory == NULL)
-    return false;
-
-  package->ampTimer = timerFactoryCreate(package->factory);
+  package->ampTimer = timerFactoryCreate(factory);
   if (package->ampTimer == NULL)
     return false;
   package->amp = boardMakeAmp(package->i2c, package->ampTimer);
   if (package->amp == NULL)
     return false;
 
-  package->codecTimer = timerFactoryCreate(package->factory);
+  package->codecTimer = timerFactoryCreate(factory);
   if (package->codecTimer == NULL)
     return false;
   package->codec = boardMakeCodec(package->i2c, package->codecTimer);
@@ -295,16 +303,20 @@ bool boardSetupClock(void)
   static const struct ExternalOscConfig extOscConfig = {
       .frequency = 12000000
   };
+  static const struct GenericDividerConfig sysDivConfig = {
+      .divisor = 2,
+      .source = CLOCK_PLL
+  };
   static const struct PllConfig sysPllConfig = {
       .divisor = 4,
       .multiplier = 17,
       .source = CLOCK_EXTERNAL
   };
-  static const uint32_t SDIO_MAX_FREQUENCY = 51000000;
+  static const uint32_t sdioMaxFrequency = 51000000;
 
-  const bool loaded = loadClockSettings(&sharedClockSettings);
+  const bool clockSettingsLoaded = loadClockSettings(&sharedClockSettings);
 
-  if (!loaded)
+  if (!clockSettingsLoaded)
   {
     clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_INTERNAL});
 
@@ -321,12 +333,12 @@ bool boardSetupClock(void)
 
   /* SDIO */
   const uint32_t frequency = clockFrequency(SystemPll);
-  const struct GenericDividerConfig divConfig = {
-      .divisor = (frequency + SDIO_MAX_FREQUENCY - 1) / SDIO_MAX_FREQUENCY,
+  const struct GenericDividerConfig sdioDivConfig = {
+      .divisor = (frequency + sdioMaxFrequency - 1) / sdioMaxFrequency,
       .source = CLOCK_PLL
   };
 
-  if (clockEnable(DividerC, &divConfig) != E_OK)
+  if (clockEnable(DividerC, &sdioDivConfig) != E_OK)
     return false;
   while (!clockReady(DividerC));
 
@@ -345,8 +357,27 @@ bool boardSetupClock(void)
   clockEnable(Uart1Clock, &(struct GenericClockConfig){CLOCK_PLL});
   while (!clockReady(Uart1Clock));
 
-  if (!loaded)
-    clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_PLL});
+  if (!clockSettingsLoaded)
+  {
+    if (sysPllConfig.divisor == 1)
+    {
+      /* High frequency, make a PLL clock divided by 2 for base clock ramp up */
+      clockEnable(DividerA, &sysDivConfig);
+      while (!clockReady(DividerA));
+
+      clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_IDIVA});
+      udelay(50);
+      clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_PLL});
+
+      /* Base clock is ready, temporary clock divider is not needed anymore */
+      clockDisable(DividerA);
+    }
+    else
+    {
+      /* Low CPU frequency */
+      clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_PLL});
+    }
+  }
 
   return true;
 }

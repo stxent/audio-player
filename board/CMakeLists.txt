@@ -4,6 +4,9 @@
 if(NOT DEFINED BOARD)
     message(FATAL_ERROR "BOARD not defined")
 endif()
+if(NOT DEFINED PLATFORM)
+    message(FATAL_ERROR "PLATFORM not defined")
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/libs/xcore/cmake")
@@ -19,28 +22,25 @@ git_commit_count(VERSION_SW_REVISION)
 git_hash(VERSION_SW_HASH)
 git_version(VERSION_SW_MAJOR VERSION_SW_MINOR)
 configure_file("version_template.c" "${PROJECT_BINARY_DIR}/version.c")
-list(APPEND SHARED_SOURCES "${PROJECT_BINARY_DIR}/version.c")
 
-# Shared objects
+# Find source files
+file(GLOB_RECURSE APPLICATION_SOURCES "${BOARD}/application/*.c")
 file(GLOB_RECURSE SHARED_SOURCES "${BOARD}/shared/*.c")
 list(APPEND SHARED_SOURCES "${PROJECT_BINARY_DIR}/version.c")
 
-if(SHARED_SOURCES)
-    add_library(shared ${SHARED_SOURCES})
-    target_include_directories(shared PUBLIC "${BOARD}/shared")
-    target_link_libraries(shared PUBLIC core dpm)
-endif()
+# Shared package
+add_library(shared ${SHARED_SOURCES})
+target_include_directories(shared PUBLIC "${BOARD}/shared")
+target_link_options(shared PUBLIC SHELL:${FLAGS_CPU} SHELL:${FLAGS_LINKER})
+# Shared library depends on includes from core object library
+target_link_libraries(shared PUBLIC core dpm yaf)
 
 set(EXECUTABLES "")
 
 # Application package
-file(GLOB_RECURSE APPLICATION_SOURCES "${BOARD}/application/*.c")
-
-if(APPLICATION_SOURCES)
-    list(APPEND EXECUTABLES "application")
-    set(application_DIR "${BOARD}/application")
-    set(application_SOURCES ${APPLICATION_SOURCES})
-endif()
+list(APPEND EXECUTABLES "application")
+set(application_DIR "${BOARD}/application")
+set(application_SOURCES ${APPLICATION_SOURCES})
 
 # Test packages
 list_directories(TESTS_LIST "${CMAKE_CURRENT_SOURCE_DIR}/${BOARD}/tests")
@@ -62,15 +62,11 @@ foreach(EXECUTABLE_NAME ${EXECUTABLES})
 
     add_executable(${EXECUTABLE_ARTIFACT} ${${EXECUTABLE_NAME}_SOURCES})
     target_include_directories(${EXECUTABLE_ARTIFACT} PRIVATE ${EXECUTABLE_NAME}_DIR)
-    target_link_options(${EXECUTABLE_ARTIFACT} PRIVATE SHELL:${FLAGS_CPU} SHELL:${FLAGS_LINKER})
-    target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE core dpm yaf)
-
-    if(TARGET shared)
-        target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE shared)
-    endif()
+    target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE shared)
 
     if(USE_DBG)
         target_compile_definitions(${EXECUTABLE_ARTIFACT} PRIVATE -DENABLE_DBG)
+        target_link_options(${EXECUTABLE_ARTIFACT} PRIVATE SHELL:"-Wl,--print-memory-usage")
     endif()
     if(USE_DFU)
         target_compile_definitions(${EXECUTABLE_ARTIFACT} PRIVATE -DENABLE_DFU)
@@ -82,11 +78,7 @@ foreach(EXECUTABLE_NAME ${EXECUTABLES})
         target_compile_definitions(${EXECUTABLE_ARTIFACT} PRIVATE -DENABLE_WDT)
     endif()
 
-    if("${BOARD}" STREQUAL "linux")
-        if(${EXECUTABLE_NAME} MATCHES "test_.*")
-            add_test(${EXECUTABLE_NAME} ${EXECUTABLE_ARTIFACT})
-        endif()
-    else()
+    if(NOT "${BOARD}" STREQUAL "linux")
         target_link_options(${EXECUTABLE_ARTIFACT} PRIVATE SHELL:-T"${PROJECT_BINARY_DIR}/memory.ld")
 
         add_custom_command(TARGET ${EXECUTABLE_ARTIFACT} POST_BUILD
@@ -95,5 +87,9 @@ foreach(EXECUTABLE_NAME ${EXECUTABLES})
         add_custom_command(TARGET ${EXECUTABLE_ARTIFACT} POST_BUILD
                 COMMAND "${CMAKE_OBJCOPY}" ${EXECUTABLE_ARTIFACT} -Oihex ${EXECUTABLE_NAME}.hex
         )
+    else()
+        if(${EXECUTABLE_NAME} MATCHES "test_.*")
+            add_test(${EXECUTABLE_NAME} ${EXECUTABLE_ARTIFACT})
+        endif()
     endif()
 endforeach()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 xent
+ * Copyright (C) 2024 xent
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
 
@@ -27,9 +27,9 @@ MEMORY
   PPB (rw)   : ORIGIN = 0xE0000000, LENGTH = 1M
 
   /* Local SRAM */
-  SRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 96K
+  SRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 128K
   /* Local SRAM */
-  SRAM1 (rwx) : ORIGIN = 0x10080000, LENGTH = 40K - 32
+  SRAM1 (rwx) : ORIGIN = 0x10080000, LENGTH = 72K - 32
   /* AHB SRAM */
   SRAM2 (rwx) : ORIGIN = 0x20000000, LENGTH = 32K
   /* AHB SRAM */
@@ -72,7 +72,7 @@ SECTIONS
 
   _sidata = LOADADDR(.data);
 
-  .text_all : ALIGN(4)
+  .text_other : ALIGN(4)
   {
     *(.text)
     *(.text*)

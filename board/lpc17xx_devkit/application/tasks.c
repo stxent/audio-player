@@ -29,10 +29,12 @@ static void onButtonCheckEvent(void *);
 static void onCardMounted(void *);
 static void onCardUnmounted(void *);
 static void onConversionCompleted(void *);
+static void onGuardTimerEvent(void *);
 static void onMountTimerEvent(void *);
 static void onPlayerFormatChanged(void *, uint32_t, uint8_t);
 static void onPlayerStateChanged(void *, enum PlayerState);
 
+static void guardCheckTask(void *);
 static void mountTask(void *);
 static void playNextTask(void *);
 static void playPauseTask(void *);
@@ -50,7 +52,7 @@ static void onLoadTimerOverflow(void *);
 /*----------------------------------------------------------------------------*/
 typedef void (*ButtonCallback)(void *);
 
-static const ButtonCallback BUTTON_TASKS[] = {
+static const ButtonCallback buttonTaskMap[] = {
     playPreviousTask,
     stopPlayingTask,
     playPauseTask,
@@ -122,19 +124,21 @@ static void onBusIdle(void *argument, void *device)
 /*----------------------------------------------------------------------------*/
 static void onButtonCheckEvent(void *argument)
 {
-  static const uint8_t DEBOUNCE_THRESHOLD = 3;
+  static const uint8_t buttonDebounceThreshold = 3;
 
   struct Board * const board = argument;
   const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
+
+  board->guard.button = true;
 
   for (size_t i = 0; i < ARRAY_SIZE(board->buttonPackage.debounce); ++i)
   {
     if (!(value & (1 << i)))
     {
-      if (board->buttonPackage.debounce[i] < DEBOUNCE_THRESHOLD)
+      if (board->buttonPackage.debounce[i] < buttonDebounceThreshold)
       {
-        if (++board->buttonPackage.debounce[i] == DEBOUNCE_THRESHOLD)
-          wqAdd(WQ_DEFAULT, BUTTON_TASKS[i], board);
+        if (++board->buttonPackage.debounce[i] == buttonDebounceThreshold)
+          wqAdd(WQ_DEFAULT, buttonTaskMap[i], board);
       }
     }
     else
@@ -143,9 +147,6 @@ static void onButtonCheckEvent(void *argument)
         --board->buttonPackage.debounce[i];
     }
   }
-
-  if (board->system.watchdog != NULL)
-    watchdogReload(board->system.watchdog);
 }
 /*----------------------------------------------------------------------------*/
 static void onCardMounted(void *argument)
@@ -199,6 +200,11 @@ static void onConversionCompleted(void *argument)
   }
 }
 /*----------------------------------------------------------------------------*/
+static void onGuardTimerEvent(void *argument)
+{
+  wqAdd(WQ_LP, guardCheckTask, argument);
+}
+/*----------------------------------------------------------------------------*/
 static void onMountTimerEvent(void *argument)
 {
   struct Board * const board = argument;
@@ -224,7 +230,7 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
   struct Board * const board = argument;
 
 #ifdef ENABLE_DBG
-  static const char *STATE_NAMES[] = {
+  static const char *stateNameMap[] = {
       "PLAYING", "PAUSED", "STOPPED", "ERROR"
   };
   size_t count;
@@ -233,7 +239,7 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
   char text[64];
 
   count = sprintf(text, "Player state %s track %lu/%lu\r\n",
-      STATE_NAMES[state],
+      stateNameMap[state],
       (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
       (unsigned long)total
   );
@@ -268,6 +274,20 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       pinReset(board->indication.red);
       wqAdd(WQ_DEFAULT, unmountTask, board);
       break;
+  }
+}
+/*----------------------------------------------------------------------------*/
+static void guardCheckTask(void *argument)
+{
+  struct Board * const board = argument;
+
+  if (board->guard.adc && board->guard.button)
+  {
+    board->guard.adc = false;
+    board->guard.button = false;
+
+    if (board->system.watchdog != NULL)
+      watchdogReload(board->system.watchdog);
   }
 }
 /*----------------------------------------------------------------------------*/
@@ -386,6 +406,12 @@ static void startupTask(void *argument)
       timerGetFrequency(board->fs.timer));
   timerEnable(board->fs.timer);
 
+  /* 2 Hz watchdog update task */
+  timerSetCallback(board->chronoPackage.guardTimer, onGuardTimerEvent, board);
+  timerSetOverflow(board->chronoPackage.guardTimer,
+      timerGetFrequency(board->chronoPackage.guardTimer) / 2);
+  timerEnable(board->chronoPackage.guardTimer);
+
   /* 2 * 100 Hz ADC trigger rate, start ADC sampling */
   ifSetParam(board->analogPackage.adc, IF_ENABLE, NULL);
   timerSetOverflow(board->analogPackage.timer,
@@ -393,7 +419,7 @@ static void startupTask(void *argument)
   timerEnable(board->analogPackage.timer);
 
   /* Enable base timer for timer factory */
-  timerEnable(board->codecPackage.baseTimer);
+  timerEnable(board->chronoPackage.timer);
 
 #ifdef ENABLE_DBG
   timerSetCallback(board->debug.timer, onLoadTimerOverflow, board);
@@ -435,7 +461,7 @@ static void unmountTask(void *argument)
 /*----------------------------------------------------------------------------*/
 static void volumeChangedTask(void *argument)
 {
-  static const int DELTA_THRESHOLD = 2;
+  static const int volumeDeltaThreshold = 2;
 
   struct Board * const board = argument;
   const uint16_t average = afValue(&board->analogPackage.filter);
@@ -443,8 +469,9 @@ static void volumeChangedTask(void *argument)
   const int previous = board->analogPackage.value;
 
   board->event.volume = false;
+  board->guard.adc = true;
 
-  if (abs(current - previous) >= DELTA_THRESHOLD)
+  if (abs(current - previous) >= volumeDeltaThreshold)
   {
     board->analogPackage.value = (uint8_t)current;
     codecSetOutputGain(board->codecPackage.codec, CHANNEL_BOTH,

@@ -18,6 +18,7 @@ struct Board
 {
   struct AnalogPackage analogPackage;
   struct ButtonPackage buttonPackage;
+  struct ChronoPackage chronoPackage;
   struct CodecPackage codecPackage;
   struct Player player;
 
@@ -69,6 +70,12 @@ struct Board
     bool seeded;
     bool volume;
   } event;
+
+  struct
+  {
+    bool adc;
+    bool button;
+  } guard;
 
   struct
   {

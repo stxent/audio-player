@@ -16,7 +16,7 @@ else()
 endif()
 
 # Generate linker script
-if(USE_DFU OR ${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")
+if(USE_DFU)
     math(EXPR ROM_LENGTH "${FLASH_SIZE} - ${DFU_LENGTH}")
     math(EXPR ROM_ORIGIN "${FLASH_BASE} + ${DFU_LENGTH}")
 else()

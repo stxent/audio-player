@@ -11,13 +11,13 @@ EXTERN(__assert_func)
 
 MEMORY
 {
-  ROM (rx)   : ORIGIN = ${ROM_ORIGIN}, LENGTH = ${ROM_LENGTH}
+  ROM (rx)  : ORIGIN = ${ROM_ORIGIN}, LENGTH = ${ROM_LENGTH}
 
-  GPIO (rw)  : ORIGIN = 0x2009C000, LENGTH = 16K
-  APB0 (rw)  : ORIGIN = 0x40000000, LENGTH = 512K
-  APB1 (rw)  : ORIGIN = 0x40080000, LENGTH = 512K
-  AHB (rw)   : ORIGIN = 0x50000000, LENGTH = 2M
-  PPB (rw)   : ORIGIN = 0xE0000000, LENGTH = 1M
+  GPIO (rw) : ORIGIN = 0x2009C000, LENGTH = 16K
+  APB0 (rw) : ORIGIN = 0x40000000, LENGTH = 512K
+  APB1 (rw) : ORIGIN = 0x40080000, LENGTH = 512K
+  AHB (rw)  : ORIGIN = 0x50000000, LENGTH = 2M
+  PPB (rw)  : ORIGIN = 0xE0000000, LENGTH = 1M
 
   /* Local SRAM */
   SRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 32K
@@ -40,14 +40,12 @@ SECTIONS
     *(.rodata*)
 
     _etext = .;
-  } >ROM =0xFF
 
-  .data_ptr : ALIGN(4)
-  {
+    . = ALIGN(4);
     _sidata = .;
   } >ROM =0xFF
 
-  .data : ALIGN(4)
+  .data : AT(_sidata) ALIGN(4)
   {
     _sdata = .;
 
@@ -55,7 +53,7 @@ SECTIONS
     *(.data*)
 
     _edata = .;
-  } >SRAM0 AT >ROM
+  } >SRAM0
 
   .bss : ALIGN(4)
   {

@@ -51,14 +51,12 @@ SECTIONS
     *(.rodata*)
 
     _etext = .;
-  } >ROM =0xFF
 
-  .data_ptr : ALIGN(4)
-  {
+    . = ALIGN(4);
     _sidata = .;
   } >ROM =0xFF
 
-  .data : ALIGN(4)
+  .data : AT(_sidata) ALIGN(4)
   {
     _sdata = .;
 
@@ -66,7 +64,7 @@ SECTIONS
     *(.data*)
 
     _edata = .;
-  } >SRAM1 AT >ROM
+  } >SRAM1
 
   .bss : ALIGN(4)
   {

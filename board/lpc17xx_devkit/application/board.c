@@ -81,7 +81,9 @@ void appBoardInit(struct Board *board)
 
   ready = ready && boardSetupAnalogPackage(&board->analogPackage);
   ready = ready && boardSetupButtonPackage(&board->buttonPackage);
-  ready = ready && boardSetupCodecPackage(&board->codecPackage);
+  ready = ready && boardSetupChronoPackage(&board->chronoPackage);
+  ready = ready && boardSetupCodecPackage(&board->codecPackage,
+      board->chronoPackage.factory);
 
   board->audio.i2s = boardMakeI2S();
   assert(board->audio.i2s != NULL);
@@ -108,6 +110,9 @@ void appBoardInit(struct Board *board)
   board->event.mount = false;
   board->event.seeded = false;
   board->event.volume = false;
+
+  board->guard.adc = false;
+  board->guard.button = false;
 
   board->debug.idle = 0;
   board->debug.loops = 0;

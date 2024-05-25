@@ -5,12 +5,13 @@ cmake_minimum_required(VERSION 3.21)
 project(AudioPlayer C)
 
 option(ENABLE_MP3 "Enable MP3 support." ON)
+set(PATH_LENGTH 64 CACHE STRING "Maximum length of a track path in bytes.")
+
 option(USE_DBG "Enable debug messages." OFF)
 option(USE_DFU "Use memory layout for the bootloader." OFF)
 option(USE_LTO "Enable Link Time Optimization." OFF)
 option(USE_NOR "Use memory layout for external flash memory." OFF)
 option(USE_WDT "Enable watchdog timer." OFF)
-set(PATH_LENGTH 64 CACHE STRING "Maximum length of track path length in bytes.")
 
 # Default compiler flags
 set(FLAGS_PROJECT "-fdata-sections -ffunction-sections -pedantic -Wall -Wextra -Wshadow")
@@ -29,7 +30,7 @@ if(USE_LTO)
 endif()
 
 # Configure XCORE library
-set(FS_NAME_LENGTH 80 CACHE INTERNAL "Maximum length of filesystem entry name in bytes." FORCE)
+set(XCORE_ENTRY_LENGTH 80 CACHE STRING "" FORCE)
 add_subdirectory(libs/xcore xcore)
 
 if(USE_DBG)
@@ -40,11 +41,11 @@ if(USE_DBG)
 endif()
 
 # Configure HALM library, HALM_CONFIG_FILE should be defined
-set(HALM_CONFIG_FILE "${PROJECT_SOURCE_DIR}/board/${BOARD}/halm.config" CACHE INTERNAL "Path to the config file." FORCE)
+set(HALM_CONFIG_FILE "${PROJECT_SOURCE_DIR}/board/${BOARD}/halm.config" CACHE INTERNAL "" FORCE)
 add_subdirectory(libs/halm halm)
 
 # Configure YAF library
-set(YAF_CONFIG_THREADS OFF CACHE INTERNAL "Enable multithreading." FORCE)
+set(YAF_THREADS OFF CACHE STRING "" FORCE)
 add_subdirectory(libs/yaf yaf)
 
 # Configure DPM library
@@ -52,8 +53,9 @@ add_subdirectory(libs/dpm dpm)
 
 # Configure Helix MP3 library
 if(ENABLE_MP3)
-    set(HELIX_MP3_LTO ${USE_LTO} CACHE INTERNAL "Enable Link Time Optimization." FORCE)
-    set(HELIX_MP3_STATIC ON CACHE INTERNAL "Enable static buffers for a decoder." FORCE)
+    set(HELIX_MP3_C_FLAGS "${FLAGS_CPU} ${FLAGS_PROJECT}" CACHE INTERNAL "" FORCE)
+    set(HELIX_MP3_LTO ${USE_LTO} CACHE STRING "" FORCE)
+    set(HELIX_MP3_STATIC ON CACHE STRING "" FORCE)
     add_subdirectory(libs/helix_mp3 helix_mp3)
 endif()
 
