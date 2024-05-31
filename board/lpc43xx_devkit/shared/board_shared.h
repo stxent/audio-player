@@ -27,6 +27,9 @@
 #define BOARD_LED_WA_PIN      PIN(PORT_6, 8)
 #define BOARD_LED_WB_PIN      PIN(PORT_6, 7)
 #define BOARD_POWER_PIN       PIN(PORT_1, 8)
+
+#define CODEC_INPUT_PATH      AIC3X_NONE
+#define CODEC_OUTPUT_PATH     AIC3X_LINE_OUT_DIFF
 /*----------------------------------------------------------------------------*/
 DEFINE_WQ_IRQ(WQ_LP)
 

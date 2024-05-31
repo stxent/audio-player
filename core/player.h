@@ -7,6 +7,7 @@
 #ifndef CORE_PLAYER_H_
 #define CORE_PLAYER_H_
 /*----------------------------------------------------------------------------*/
+#include "wav_defs.h"
 #include <xcore/containers/tg_array.h>
 #include <xcore/fs/fs.h>
 #include <xcore/stream.h>
@@ -17,7 +18,7 @@
 #  define TRACK_PATH_LENGTH CONFIG_PATH_LENGTH
 #endif
 
-enum PlayerState
+enum [[gnu::packed]] PlayerState
 {
   PLAYER_PLAYING,
   PLAYER_PAUSED,
@@ -65,7 +66,12 @@ struct Player
   PathArray tracks;
 
   /* File buffer */
-  uint8_t buffer[4096];
+  union
+  {
+    uint8_t raw[4096];
+    struct WavHeader wav;
+  } buffer;
+
   /* Position from the beginning of the buffer in bytes */
   size_t bufferPosition;
   /* Bytes in the buffer */

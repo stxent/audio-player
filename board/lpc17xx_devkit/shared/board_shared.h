@@ -19,7 +19,7 @@
 
 #ifdef AUDIOBOX_V1
 #  define BOARD_ADC_PIN         PIN(0, 2)
-#  define BOARD_BUTTON_1_PIN    PIN(0, 15) /* Previous */
+#  define BOARD_BUTTON_1_PIN    PIN(1, 26) /* Previous */
 #  define BOARD_BUTTON_2_PIN    PIN(4, 28) /* Stop */
 #  define BOARD_BUTTON_3_PIN    PIN(0, 16) /* Play/Pause */
 #  define BOARD_BUTTON_4_PIN    PIN(4, 29) /* Next */
@@ -48,6 +48,9 @@
 #  define BOARD_POWER_PIN       PIN(2, 8)
 #  define BOARD_SDIO_CS_PIN     PIN(0, 22)
 #endif
+
+#define CODEC_INPUT_PATH        AIC3X_NONE
+#define CODEC_OUTPUT_PATH       AIC3X_LINE_OUT_DIFF
 /*----------------------------------------------------------------------------*/
 struct Entity;
 struct GpioBus;

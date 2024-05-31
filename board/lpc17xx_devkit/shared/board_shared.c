@@ -44,7 +44,7 @@ struct Entity *boardMakeAmp(struct Interface *i2c, struct Timer *timer)
   const struct AmplifierConfig ampConfig = {
       .bus = i2c,
       .timer = timer,
-      .address = 0x70,
+      .address = AMP_ADDRESS,
       .rate = 0
   };
 
@@ -161,7 +161,7 @@ struct Interface *boardMakeSerial(void)
       .rxLength = 16,
       .txLength = 128,
       .rate = 115200,
-      .rx = PIN(0, 16),
+      .rx = 0,
       .tx = PIN(0, 15),
       .priority = PRI_SERIAL,
       .channel = 1
@@ -203,7 +203,7 @@ struct Watchdog *boardMakeWatchdog(void)
 {
   static const struct WdtConfig wdtConfig = {
       .period = 1000,
-      .source = WDT_CLOCK_PCLK
+      .source = WDT_CLOCK_IRC
   };
 
   return init(Wdt, &wdtConfig);

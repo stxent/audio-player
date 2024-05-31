@@ -11,8 +11,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
-#define AMP_GAIN_MIN 0
-#define AMP_GAIN_MAX 3
+#define AMP_ADDRESS   0x15
+#define AMP_GAIN_MIN  0
+#define AMP_GAIN_MAX  3
 /*----------------------------------------------------------------------------*/
 extern const struct EntityClass * const Amplifier;
 

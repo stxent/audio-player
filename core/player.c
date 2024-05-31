@@ -10,7 +10,6 @@
 #endif
 
 #include "player.h"
-#include "wav_defs.h"
 #include <halm/wq.h>
 #include <xcore/fs/utils.h>
 #include <xcore/memory.h>
@@ -113,7 +112,7 @@ static bool fetchNextChunkMP3(struct Player *player, uint8_t *buffer,
             player->playback.file,
             FS_NODE_DATA,
             info->position,
-            player->buffer,
+            player->buffer.raw,
             chunk,
             &player->bufferSize
         );
@@ -149,7 +148,9 @@ static bool fetchNextChunkMP3(struct Player *player, uint8_t *buffer,
       if (player->bufferPosition > 0)
       {
         assert((left & (sizeof(void *) - 1)) == 0);
-        memmove(player->buffer, player->buffer + player->bufferPosition, left);
+
+        memmove(player->buffer.raw, player->buffer.raw + player->bufferPosition,
+            left);
       }
 
       for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
@@ -158,7 +159,7 @@ static bool fetchNextChunkMP3(struct Player *player, uint8_t *buffer,
             player->playback.file,
             FS_NODE_DATA,
             info->position,
-            player->buffer + left,
+            player->buffer.raw + left,
             sizeof(player->buffer) / 2,
             &read
         );
@@ -181,14 +182,16 @@ static bool fetchNextChunkMP3(struct Player *player, uint8_t *buffer,
     if (player->bufferPosition >= player->bufferSize)
       break;
 
-    const int offset = MP3FindSyncWord(player->buffer + player->bufferPosition,
-        player->bufferSize - player->bufferPosition);
+    const int offset = MP3FindSyncWord(
+        player->buffer.raw + player->bufferPosition,
+        player->bufferSize - player->bufferPosition
+    );
 
     if (offset >= 0)
     {
       player->bufferPosition += (size_t)offset;
 
-      unsigned char *inputBuffer = player->buffer + player->bufferPosition;
+      unsigned char *inputBuffer = player->buffer.raw + player->bufferPosition;
       const int inputBufferSize = player->bufferSize - player->bufferPosition;
       int inputBytesLeft = inputBufferSize;
 
@@ -435,7 +438,7 @@ static bool parseHeaderMP3(struct Player *player, struct FsNode *node,
           node,
           FS_NODE_DATA,
           headerPosition,
-          player->buffer,
+          player->buffer.raw,
           sizeof(player->buffer),
           &count
       );
@@ -450,7 +453,7 @@ static bool parseHeaderMP3(struct Player *player, struct FsNode *node,
 
       while (bufferPosition < count)
       {
-        const int offset = MP3FindSyncWord(player->buffer + bufferPosition,
+        const int offset = MP3FindSyncWord(player->buffer.raw + bufferPosition,
             count - bufferPosition);
 
         if (offset >= 0)
@@ -458,7 +461,7 @@ static bool parseHeaderMP3(struct Player *player, struct FsNode *node,
           MP3FrameInfo frameInfo;
 
           const int error = MP3GetNextFrameInfo(player->mp3Decoder, &frameInfo,
-              player->buffer + offset, count - offset);
+              player->buffer.raw + offset, count - offset);
 
           if (error == ERR_MP3_NONE)
           {
@@ -500,7 +503,7 @@ static bool parseHeaderWAV(struct Player *player, struct FsNode *node,
         node,
         FS_NODE_DATA,
         0,
-        player->buffer,
+        player->buffer.raw,
         sizeof(struct WavHeader),
         &count
     );
@@ -511,8 +514,7 @@ static bool parseHeaderWAV(struct Player *player, struct FsNode *node,
 
   if (res == E_OK && count == sizeof(struct WavHeader))
   {
-    const struct WavHeader * const header =
-        (const struct WavHeader *)player->buffer;
+    const struct WavHeader * const header = &player->buffer.wav;
     const uint16_t channels = fromLittleEndian16(header->numChannels);
     const uint16_t width = header->bitsPerSample >> 3;
 

@@ -43,7 +43,7 @@ struct Entity *boardMakeAmp(struct Interface *i2c, struct Timer *timer)
   const struct AmplifierConfig ampConfig = {
       .bus = i2c,
       .timer = timer,
-      .address = 0x70,
+      .address = AMP_ADDRESS,
       .rate = 0
   };
 
@@ -300,6 +300,8 @@ bool boardSetupCodecPackage(struct CodecPackage *package,
 /*----------------------------------------------------------------------------*/
 bool boardSetupClock(void)
 {
+  /* Divider D may be used by the bootloader for the SPIFI module */
+
   static const struct ExternalOscConfig extOscConfig = {
       .frequency = 12000000
   };
@@ -312,13 +314,26 @@ bool boardSetupClock(void)
       .multiplier = 17,
       .source = CLOCK_EXTERNAL
   };
-  static const uint32_t sdioMaxFrequency = 51000000;
 
-  const bool clockSettingsLoaded = loadClockSettings(&sharedClockSettings);
+  bool clockSettingsLoaded = loadClockSettings(&sharedClockSettings);
+  const bool spifiClockEnabled = clockReady(SpifiClock);
+
+  if (clockSettingsLoaded)
+  {
+    /* Check clock sources */
+    if (!clockReady(ExternalOsc) || !clockReady(SystemPll))
+      clockSettingsLoaded = false;
+  }
 
   if (!clockSettingsLoaded)
   {
     clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_INTERNAL});
+
+    if (spifiClockEnabled)
+    {
+      /* Running from NOR Flash, switch SPIFI clock to IRC without disabling */
+      clockEnable(SpifiClock, &(struct GenericClockConfig){CLOCK_INTERNAL});
+    }
 
     if (clockEnable(ExternalOsc, &extOscConfig) != E_OK)
       return false;
@@ -329,16 +344,17 @@ bool boardSetupClock(void)
     while (!clockReady(SystemPll));
   }
 
-  /* Divider D may be used by bootloader to configure SPIM clock */
-
-  /* SDIO */
+  static const uint32_t sdmmcMaxFrequency = 51000000;
+  static const uint32_t spifiMaxFrequency = 30000000;
   const uint32_t frequency = clockFrequency(SystemPll);
-  const struct GenericDividerConfig sdioDivConfig = {
-      .divisor = (frequency + sdioMaxFrequency - 1) / sdioMaxFrequency,
+
+  /* SDMMC */
+  const struct GenericDividerConfig sdmmcDivConfig = {
+      .divisor = (frequency + sdmmcMaxFrequency - 1) / sdmmcMaxFrequency,
       .source = CLOCK_PLL
   };
 
-  if (clockEnable(DividerC, &sdioDivConfig) != E_OK)
+  if (clockEnable(DividerC, &sdmmcDivConfig) != E_OK)
     return false;
   while (!clockReady(DividerC));
 
@@ -376,6 +392,29 @@ bool boardSetupClock(void)
     {
       /* Low CPU frequency */
       clockEnable(MainClock, &(struct GenericClockConfig){CLOCK_PLL});
+    }
+
+    /* SPIFI */
+    if (spifiClockEnabled)
+    {
+      /* Running from NOR Flash, update SPIFI clock without disabling */
+      if (frequency > spifiMaxFrequency)
+      {
+        const struct GenericDividerConfig spifiDivConfig = {
+            .divisor = (frequency + spifiMaxFrequency - 1) / spifiMaxFrequency,
+            .source = CLOCK_PLL
+        };
+
+        if (clockEnable(DividerD, &spifiDivConfig) != E_OK)
+          return false;
+        while (!clockReady(DividerD));
+
+        clockEnable(SpifiClock, &(struct GenericClockConfig){CLOCK_IDIVD});
+      }
+      else
+      {
+        clockEnable(SpifiClock, &(struct GenericClockConfig){CLOCK_PLL});
+      }
     }
   }
 

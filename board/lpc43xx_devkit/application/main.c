@@ -43,6 +43,10 @@ static void showClockFrequencies(struct Interface *serial)
   count = sprintf(text, "MAIN  %lu\r\n", (unsigned long)frequency);
   ifWrite(serial, text, count);
 
+  frequency = clockFrequency(SdioClock);
+  count = sprintf(text, "SDMMC %lu\r\n", (unsigned long)frequency);
+  ifWrite(serial, text, count);
+
   frequency = clockFrequency(SpifiClock);
   count = sprintf(text, "SPIFI %lu\r\n", (unsigned long)frequency);
   ifWrite(serial, text, count);

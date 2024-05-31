@@ -20,7 +20,7 @@
 #include <yaf/fat32.h>
 #include <stdio.h>
 /*----------------------------------------------------------------------------*/
-#define BUS_MAX_RETRIES 10
+#define BUS_MAX_RETRIES 100
 /*----------------------------------------------------------------------------*/
 static void onBusError(void *, void *);
 static void onBusIdle(void *, void *);
@@ -97,7 +97,7 @@ static void onBusError(void *argument, void *device)
 
       pinReset(board->indication.indB);
       codecReset(board->codecPackage.codec, 44100,
-          AIC3X_NONE, AIC3X_LINE_OUT_DIFF);
+          CODEC_INPUT_PATH, CODEC_OUTPUT_PATH);
     }
   }
 }
@@ -113,6 +113,12 @@ static void onBusIdle(void *argument, void *device)
   }
   else
   {
+    if (board->event.codecRetries && !board->event.volume)
+    {
+      if (wqAdd(WQ_DEFAULT, volumeChangedTask, argument) == E_OK)
+        board->event.volume = true;
+    }
+
     board->event.codecRetries = 0;
     pinSet(board->indication.indB);
   }
@@ -214,9 +220,23 @@ static void onMountTimerEvent(void *argument)
   }
 }
 /*----------------------------------------------------------------------------*/
-static void onPlayerFormatChanged(void *argument, uint32_t rate, uint8_t)
+static void onPlayerFormatChanged(void *argument, uint32_t rate,
+    uint8_t channels)
 {
   struct Board * const board = argument;
+
+#ifdef ENABLE_DBG
+  size_t count;
+  char text[64];
+
+  count = sprintf(text, "Player rate %lu channels %lu\r\n",
+      (unsigned long)rate,
+      (unsigned long)channels
+  );
+  ifWrite(board->system.serial, text, count);
+#else
+  (void)channels;
+#endif
 
   ifSetParam(board->audio.i2s, IF_RATE, &rate);
   codecSetSampleRate(board->codecPackage.codec, rate);
@@ -278,6 +298,10 @@ static void guardCheckTask(void *argument)
 {
   struct Board * const board = argument;
 
+  /* Check codec state */
+  codecCheck(board->codecPackage.codec);
+
+  /* Check task states */
   if (board->guard.adc && board->guard.button)
   {
     board->guard.adc = false;
@@ -411,7 +435,8 @@ static void startupTask(void *argument)
   /* Enqueue power amplifier configuration */
   ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
   /* Enqueue audio codec configuration */
-  codecReset(board->codecPackage.codec, 44100, AIC3X_NONE, AIC3X_LINE_OUT_DIFF);
+  codecReset(board->codecPackage.codec, 44100,
+      CODEC_INPUT_PATH, CODEC_OUTPUT_PATH);
 
   /* Enable SD card power */
   pinSet(board->system.power);
