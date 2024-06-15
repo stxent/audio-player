@@ -12,18 +12,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 /*----------------------------------------------------------------------------*/
-extern unsigned long _slibs;
-extern unsigned long _elibs;
-extern unsigned long _silibs;
+extern unsigned long _saccel;
+extern unsigned long _eaccel;
+extern unsigned long _siaccel;
 /*----------------------------------------------------------------------------*/
 #if defined(ENABLE_NOR)
-static void loadLibraryCode(void)
+static void loadAcceleratedCode(void)
 {
   register unsigned long *dst __asm__ ("r0");
   register unsigned long *src __asm__ ("r1");
 
-  /* Copy the library segment initializers from flash to RAM */
-  for (dst = &_slibs, src = &_silibs; dst < &_elibs;)
+  /* Copy the accelerated code from Flash to RAM */
+  for (dst = &_saccel, src = &_siaccel; dst < &_eaccel;)
     *dst++ = *src++;
 }
 #endif
@@ -60,8 +60,7 @@ static void showClockFrequencies(struct Interface *serial)
 int main(void)
 {
 #ifdef ENABLE_NOR
-  loadLibraryCode();
-  nvicSetVectorTableOffset((uint32_t)&_slibs);
+  loadAcceleratedCode();
 #endif
 
   struct Board * const board = malloc(sizeof(struct Board));

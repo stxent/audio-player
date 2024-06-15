@@ -46,19 +46,19 @@ SECTIONS
     *(.shared*)
   } >SRAM4
 
-  .libs : ALIGN(4)
+  .accel : ALIGN(4)
   {
     _stext = .;
-    _slibs = .;
+    _saccel = .;
 
     *(.vectors)
     *libhelix_mp3.a:*(.text)
     *libhelix_mp3.a:*(.text*)
 
-    _elibs = .;
+    _eaccel = .;
   } >SRAM0 AT >ROM
 
-  _silibs = LOADADDR(.libs);
+  _siaccel = LOADADDR(.accel);
 
   .data : ALIGN(4)
   {
