@@ -8,9 +8,9 @@
 #include "dfu_defs.h"
 #include "memory.h"
 #include "tasks.h"
+#include <dpm/button.h>
 #include <halm/core/cortex/nvic.h>
 #include <halm/generic/work_queue.h>
-#include <halm/gpio_bus.h>
 #include <halm/platform/lpc/backup_domain.h>
 #include <halm/platform/lpc/i2s_dma.h>
 #include <halm/timer.h>
@@ -32,7 +32,10 @@ static const struct WorkQueueIrqConfig workQueueIrqConfig = {
 /*----------------------------------------------------------------------------*/
 void appBoardCheckBoot(struct Board *board)
 {
-  const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
+  uint32_t value = 0;
+
+  for (size_t i = 0; i < ARRAY_SIZE(board->buttonPackage.buttons); ++i)
+    value |= pinRead(board->buttonPackage.buttons[i]->pin) ? (1 << i) : 0;
 
   if (!(value & DFU_BUTTON_MASK))
   {
@@ -80,8 +83,9 @@ void appBoardInit(struct Board *board)
   pinOutput(board->indication.indB, false);
 
   ready = ready && boardSetupAnalogPackage(&board->analogPackage);
-  ready = ready && boardSetupButtonPackage(&board->buttonPackage);
   ready = ready && boardSetupChronoPackage(&board->chronoPackage);
+  ready = ready && boardSetupButtonPackage(&board->buttonPackage,
+      board->chronoPackage.factory);
   ready = ready && boardSetupCodecPackage(&board->codecPackage,
       board->chronoPackage.factory);
 
@@ -105,7 +109,6 @@ void appBoardInit(struct Board *board)
   board->event.volume = false;
 
   board->guard.adc = false;
-  board->guard.button = false;
 
   board->debug.idle = 0;
   board->debug.loops = 0;

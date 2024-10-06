@@ -33,6 +33,7 @@
 /*----------------------------------------------------------------------------*/
 DEFINE_WQ_IRQ(WQ_LP)
 
+struct Button;
 struct Entity;
 struct GpioBus;
 struct Interface;
@@ -49,9 +50,9 @@ struct AnalogPackage
 
 struct ButtonPackage
 {
-  struct GpioBus *buttons;
-  struct Timer *timer;
-  uint8_t debounce[4];
+  struct Button *buttons[4];
+  struct Interrupt *events[4];
+  struct Timer *timers[4];
 };
 
 struct ChronoPackage
@@ -77,7 +78,6 @@ BEGIN_DECLS
 
 struct Entity *boardMakeAmp(struct Interface *, struct Timer *);
 struct Entity *boardMakeCodec(struct Interface *, struct Timer *);
-struct Timer *boardMakeCodecTimer(void);
 struct Timer *boardMakeLoadTimer(void);
 struct Timer *boardMakeMountTimer(void);
 struct Interface *boardMakeI2C(void);
@@ -89,7 +89,7 @@ struct Interface *boardMakeSerial(void);
 struct Watchdog *boardMakeWatchdog(void);
 
 bool boardSetupAnalogPackage(struct AnalogPackage *);
-bool boardSetupButtonPackage(struct ButtonPackage *);
+bool boardSetupButtonPackage(struct ButtonPackage *, struct TimerFactory *);
 bool boardSetupChronoPackage(struct ChronoPackage *);
 bool boardSetupCodecPackage(struct CodecPackage *, struct TimerFactory *);
 bool boardSetupClock(void);

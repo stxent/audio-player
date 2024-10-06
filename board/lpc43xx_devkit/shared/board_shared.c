@@ -12,12 +12,12 @@
 #include <halm/core/cortex/systick.h>
 #include <halm/delay.h>
 #include <halm/generic/timer_factory.h>
-#include <halm/gpio_bus.h>
 #include <halm/platform/lpc/adc_dma.h>
 #include <halm/platform/lpc/clocking.h>
 #include <halm/platform/lpc/gptimer.h>
 #include <halm/platform/lpc/i2c.h>
 #include <halm/platform/lpc/i2s_dma.h>
+#include <halm/platform/lpc/pin_int.h>
 #include <halm/platform/lpc/rit.h>
 #include <halm/platform/lpc/sdmmc.h>
 #include <halm/platform/lpc/serial.h>
@@ -26,14 +26,13 @@
 /*----------------------------------------------------------------------------*/
 #define PRI_TIMER_DBG 2
 
-#define PRI_TIMER_I2C 1
 #define PRI_I2C       1
 #define PRI_I2S       1
 #define PRI_SDMMC     1
 #define PRI_SERIAL    1
+#define PRI_TIMER_SYS 0
 /* GPDMA 1 */
 
-#define PRI_TIMER_SYS 0
 /* WQ_LP 0 */
 /*----------------------------------------------------------------------------*/
 [[gnu::alias("boardMakeI2C0")]] struct Interface *boardMakeI2C(void);
@@ -64,17 +63,6 @@ struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
   };
 
   return init(TLV320AIC3x, &codecConfig);
-}
-/*----------------------------------------------------------------------------*/
-struct Timer *boardMakeCodecTimer(void)
-{
-  static const struct GpTimerConfig codecTimerConfig = {
-      .frequency = 1000000,
-      .priority = PRI_TIMER_I2C,
-      .channel = 2
-  };
-
-  return init(GpTimer, &codecTimerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeLoadTimer(void)
@@ -221,32 +209,65 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
   return true;
 }
 /*----------------------------------------------------------------------------*/
-bool boardSetupButtonPackage(struct ButtonPackage *package)
+bool boardSetupButtonPackage(struct ButtonPackage *package,
+    struct TimerFactory *factory)
 {
-  static const PinNumber busPins[] = {
-      BOARD_BUTTON_1_PIN,
-      BOARD_BUTTON_2_PIN,
-      BOARD_BUTTON_3_PIN,
-      BOARD_BUTTON_4_PIN,
-      0
+static const struct PinIntConfig buttonIntConfigs[] = {
+      {
+          .pin = BOARD_BUTTON_1_PIN,
+          .event = INPUT_TOGGLE,
+          .pull = PIN_PULLUP
+      }, {
+          .pin = BOARD_BUTTON_2_PIN,
+          .event = INPUT_TOGGLE,
+          .pull = PIN_PULLUP
+      }, {
+          .pin = BOARD_BUTTON_3_PIN,
+          .event = INPUT_TOGGLE,
+          .pull = PIN_PULLUP
+      }, {
+          .pin = BOARD_BUTTON_4_PIN,
+          .event = INPUT_TOGGLE,
+          .pull = PIN_PULLUP
+      }
   };
-  static const struct SimpleGpioBusConfig busConfig = {
-      .pins = busPins,
-      .direction = PIN_INPUT,
-      .pull = PIN_PULLUP
-  };
 
-  package->timer = NULL;
+  static_assert(ARRAY_SIZE(buttonIntConfigs) == ARRAY_SIZE(package->buttons),
+      "Incorrect button count");
+  static_assert(ARRAY_SIZE(buttonIntConfigs) == ARRAY_SIZE(package->events),
+      "Incorrect event count");
+  static_assert(ARRAY_SIZE(buttonIntConfigs) == ARRAY_SIZE(package->timers),
+      "Incorrect timer count");
 
-  package->buttons = init(SimpleGpioBus, &busConfig);
-  if (package->buttons == NULL)
-    return false;
+  for (size_t i = 0; i < ARRAY_SIZE(buttonIntConfigs); ++i)
+  {
+    package->buttons[i] = NULL;
+    package->events[i] = NULL;
+    package->timers[i] = NULL;
+  }
 
-  package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
-  if (package->timer == NULL)
-    return false;
+  for (size_t i = 0; i < ARRAY_SIZE(buttonIntConfigs); ++i)
+  {
+    package->events[i] = init(PinInt, &buttonIntConfigs[i]);
+    if (package->events[i] == NULL)
+      return false;
 
-  memset(package->debounce, 0, sizeof(package->debounce));
+    package->timers[i] = timerFactoryCreate(factory);
+    if (package->timers[i] == NULL)
+      return false;
+
+    const struct ButtonConfig buttonConfig = {
+        .interrupt = package->events[i],
+        .timer = package->timers[i],
+        .pin = buttonIntConfigs[i].pin,
+        .delay = 3,
+        .level = false
+    };
+    package->buttons[i] = init(Button, &buttonConfig);
+    if (package->buttons[i] == NULL)
+      return false;
+  }
+
   return true;
 }
 /*----------------------------------------------------------------------------*/
@@ -255,7 +276,7 @@ bool boardSetupChronoPackage(struct ChronoPackage *package)
   package->factory = NULL;
   package->guardTimer = NULL;
 
-  package->timer = boardMakeCodecTimer();
+  package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
   if (package->timer == NULL)
     return false;
   timerSetOverflow(package->timer, timerGetFrequency(package->timer) / 1000);

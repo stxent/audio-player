@@ -71,7 +71,6 @@ struct Board
   struct
   {
     bool adc;
-    bool button;
   } guard;
 
   struct

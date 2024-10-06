@@ -14,6 +14,7 @@
 #include <dpm/audio/tlv320aic3x.h>
 #include <halm/gpio_bus.h>
 #include <halm/generic/mmcsd.h>
+#include <halm/interrupt.h>
 #include <halm/timer.h>
 #include <halm/watchdog.h>
 #include <halm/wq.h>
@@ -24,7 +25,10 @@
 /*----------------------------------------------------------------------------*/
 static void onBusError(void *, void *);
 static void onBusIdle(void *, void *);
-static void onButtonCheckEvent(void *);
+static void onButtonPlayNextPressed(void *);
+static void onButtonPlayPausePressed(void *);
+static void onButtonPlayPreviousPressed(void *);
+static void onButtonStopPlayingPressed(void *);
 static void onCardMounted(void *);
 static void onCardUnmounted(void *);
 static void onConversionCompleted(void *);
@@ -47,15 +51,6 @@ static void volumeChangedTask(void *);
 static void debugInfoTask(void *);
 static void onLoadTimerOverflow(void *);
 #endif
-/*----------------------------------------------------------------------------*/
-typedef void (*ButtonCallback)(void *);
-
-static const ButtonCallback buttonTaskMap[] = {
-    playPreviousTask,
-    stopPlayingTask,
-    playPauseTask,
-    playNextTask
-};
 /*----------------------------------------------------------------------------*/
 static void onBusError(void *argument, void *device)
 {
@@ -124,31 +119,24 @@ static void onBusIdle(void *argument, void *device)
   }
 }
 /*----------------------------------------------------------------------------*/
-static void onButtonCheckEvent(void *argument)
+static void onButtonPlayNextPressed(void *argument)
 {
-  static const uint8_t buttonDebounceThreshold = 3;
-
-  struct Board * const board = argument;
-  const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
-
-  board->guard.button = true;
-
-  for (size_t i = 0; i < ARRAY_SIZE(board->buttonPackage.debounce); ++i)
-  {
-    if (!(value & (1 << i)))
-    {
-      if (board->buttonPackage.debounce[i] < buttonDebounceThreshold)
-      {
-        if (++board->buttonPackage.debounce[i] == buttonDebounceThreshold)
-          wqAdd(WQ_DEFAULT, buttonTaskMap[i], board);
-      }
-    }
-    else
-    {
-      if (board->buttonPackage.debounce[i] > 0)
-        --board->buttonPackage.debounce[i];
-    }
-  }
+  wqAdd(WQ_DEFAULT, playNextTask, argument);
+}
+/*----------------------------------------------------------------------------*/
+static void onButtonPlayPausePressed(void *argument)
+{
+  wqAdd(WQ_DEFAULT, playPauseTask, argument);
+}
+/*----------------------------------------------------------------------------*/
+static void onButtonPlayPreviousPressed(void *argument)
+{
+  wqAdd(WQ_DEFAULT, playPreviousTask, argument);
+}
+/*----------------------------------------------------------------------------*/
+static void onButtonStopPlayingPressed(void *argument)
+{
+  wqAdd(WQ_DEFAULT, stopPlayingTask, argument);
 }
 /*----------------------------------------------------------------------------*/
 static void onCardMounted(void *argument)
@@ -304,10 +292,9 @@ static void guardCheckTask(void *argument)
   codecCheck(board->codecPackage.codec);
 
   /* Check task states */
-  if (board->guard.adc && board->guard.button)
+  if (board->guard.adc)
   {
     board->guard.adc = false;
-    board->guard.button = false;
 
     if (board->system.watchdog != NULL)
       watchdogReload(board->system.watchdog);
@@ -401,12 +388,6 @@ static void startupTask(void *argument)
 
   ifSetCallback(board->analogPackage.adc, onConversionCompleted, board);
 
-  /* 100 Hz button check rate */
-  timerSetCallback(board->buttonPackage.timer, onButtonCheckEvent, board);
-  timerSetOverflow(board->buttonPackage.timer,
-      timerGetFrequency(board->buttonPackage.timer) / 100);
-  timerEnable(board->buttonPackage.timer);
-
   /* 1 Hz card check rate */
   timerSetCallback(board->fs.timer, onMountTimerEvent, board);
   timerSetOverflow(board->fs.timer,
@@ -433,6 +414,18 @@ static void startupTask(void *argument)
   timerSetOverflow(board->debug.timer, timerGetFrequency(board->debug.timer));
   timerEnable(board->debug.timer);
 #endif
+
+  /* Connect and enable buttons */
+  interruptSetCallback(board->buttonPackage.buttons[0],
+      onButtonPlayPreviousPressed, board);
+  interruptSetCallback(board->buttonPackage.buttons[1],
+      onButtonStopPlayingPressed, board);
+  interruptSetCallback(board->buttonPackage.buttons[2],
+      onButtonPlayPausePressed, board);
+  interruptSetCallback(board->buttonPackage.buttons[3],
+      onButtonPlayNextPressed, board);
+  for (size_t i = 0; i < ARRAY_SIZE(board->buttonPackage.buttons); ++i)
+    interruptEnable(board->buttonPackage.buttons[i]);
 
   /* Enqueue power amplifier configuration */
   ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
