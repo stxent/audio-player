@@ -36,6 +36,8 @@
 #define PRI_TIMER_SYS 0
 /* WQ_LP 0 */
 /*----------------------------------------------------------------------------*/
+[[gnu::alias("boardMakeI2C0")]] struct Interface *boardMakeI2C(void);
+/*----------------------------------------------------------------------------*/
 [[gnu::section(".shared")]] static struct ClockSettings sharedClockSettings;
 /*----------------------------------------------------------------------------*/
 struct Entity *boardMakeAmp(struct Interface *i2c, struct Timer *timer)
@@ -91,7 +93,7 @@ struct Timer *boardMakeMountTimer(void)
   return init(Rit, &(struct RitConfig){PRI_TIMER_SYS});
 }
 /*----------------------------------------------------------------------------*/
-struct Interface *boardMakeI2C(void)
+struct Interface *boardMakeI2C0(void)
 {
   static const struct I2CConfig i2cConfig = {
       .rate = 400000, /* Initial rate */
@@ -99,6 +101,19 @@ struct Interface *boardMakeI2C(void)
       .sda = PIN(PORT_I2C, PIN_I2C0_SDA),
       .priority = PRI_I2C,
       .channel = 0
+  };
+
+  return init(I2C, &i2cConfig);
+}
+/*----------------------------------------------------------------------------*/
+struct Interface *boardMakeI2C1(void)
+{
+  static const struct I2CConfig i2cConfig = {
+      .rate = 400000, /* Initial rate */
+      .scl = PIN(PORT_2, 4),
+      .sda = PIN(PORT_2, 3),
+      .priority = PRI_I2C,
+      .channel = 1
   };
 
   return init(I2C, &i2cConfig);

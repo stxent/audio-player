@@ -109,6 +109,7 @@ bool playerInit(struct Player *, struct Stream *, struct Stream *,
 void playerDeinit(struct Player *);
 size_t playerGetCurrentTrack(const struct Player *);
 size_t playerGetTrackCount(const struct Player *);
+const char *playerGetTrackName(struct Player *);
 void playerPlayNext(struct Player *);
 void playerPlayPause(struct Player *);
 void playerPlayPrevious(struct Player *);

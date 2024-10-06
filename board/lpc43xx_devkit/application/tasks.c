@@ -251,14 +251,16 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       "PLAYING", "PAUSED", "STOPPED", "ERROR"
   };
   size_t count;
-  size_t index = playerGetCurrentTrack(&board->player);
-  size_t total = playerGetTrackCount(&board->player);
-  char text[64];
+  const size_t index = playerGetCurrentTrack(&board->player);
+  const size_t total = playerGetTrackCount(&board->player);
+  const char * const name = playerGetTrackName(&board->player);
+  char text[64 + TRACK_PATH_LENGTH];
 
-  count = sprintf(text, "Player state %s track %lu/%lu\r\n",
+  count = sprintf(text, "Player state %s track %lu/%lu name \"%s\"\r\n",
       stateNameMap[state],
       (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
-      (unsigned long)total
+      (unsigned long)total,
+      name != NULL ? name : ""
   );
   ifWrite(board->system.serial, text, count);
 
@@ -472,6 +474,15 @@ static void volumeChangedTask(void *argument)
   board->event.volume = false;
   codecSetOutputGain(board->codecPackage.codec, CHANNEL_BOTH,
       board->analogPackage.value);
+
+#ifdef ENABLE_DBG
+  size_t count;
+  char text[64];
+
+  count = sprintf(text, "Volume level %lu\r\n",
+      (unsigned long)board->analogPackage.value);
+  ifWrite(board->system.serial, text, count);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 #ifdef ENABLE_DBG

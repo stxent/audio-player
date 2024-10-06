@@ -830,6 +830,17 @@ size_t playerGetTrackCount(const struct Player *player)
   return pathArraySize(&player->tracks);
 }
 /*----------------------------------------------------------------------------*/
+const char *playerGetTrackName(struct Player *player)
+{
+  if (player->playback.index < pathArraySize(&player->tracks))
+  {
+    return fsExtractName(
+        pathArrayAt(&player->tracks, player->playback.index)->data);
+  }
+  else
+    return NULL;
+}
+/*----------------------------------------------------------------------------*/
 void playerPlayNext(struct Player *player)
 {
   /* Find a next track in the list */

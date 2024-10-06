@@ -81,6 +81,8 @@ struct Timer *boardMakeCodecTimer(void);
 struct Timer *boardMakeLoadTimer(void);
 struct Timer *boardMakeMountTimer(void);
 struct Interface *boardMakeI2C(void);
+struct Interface *boardMakeI2C0(void);
+struct Interface *boardMakeI2C1(void);
 struct Interface *boardMakeI2S(void);
 struct Interface *boardMakeSDMMC(void);
 struct Interface *boardMakeSerial(void);
