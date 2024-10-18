@@ -4,6 +4,7 @@
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
 
+#include "accel.h"
 #include "board_shared.h"
 #include <halm/generic/work_queue.h>
 #include <halm/timer.h>
@@ -48,6 +49,7 @@ static void onLoadTimerOverflow(void *)
 /*----------------------------------------------------------------------------*/
 int main(void)
 {
+  loadAcceleratedCode();
   boardSetupClock();
 
   struct Interface * const serial = boardMakeSerial();

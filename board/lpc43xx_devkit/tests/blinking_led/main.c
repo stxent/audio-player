@@ -4,6 +4,7 @@
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
 
+#include "accel.h"
 #include "board_shared.h"
 #include <halm/timer.h>
 #include <assert.h>
@@ -17,6 +18,7 @@ int main(void)
 {
   bool event = false;
 
+  loadAcceleratedCode();
   boardSetupClock();
 
   const struct Pin led = pinInit(BOARD_LED_R_PIN);

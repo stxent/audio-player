@@ -35,6 +35,10 @@ target_link_options(shared PUBLIC SHELL:${FLAGS_CPU} SHELL:${FLAGS_LINKER})
 # Shared library depends on includes from core object library
 target_link_libraries(shared PUBLIC core dpm yaf)
 
+if(USE_NOR)
+    target_compile_definitions(shared PUBLIC -DENABLE_NOR)
+endif()
+
 set(EXECUTABLES "")
 
 # Application package
@@ -65,14 +69,10 @@ foreach(EXECUTABLE_NAME ${EXECUTABLES})
     target_link_libraries(${EXECUTABLE_ARTIFACT} PRIVATE shared)
 
     if(USE_DBG)
-        target_compile_definitions(${EXECUTABLE_ARTIFACT} PRIVATE -DENABLE_DBG)
         target_link_options(${EXECUTABLE_ARTIFACT} PRIVATE SHELL:"-Wl,--print-memory-usage")
     endif()
     if(USE_DFU)
         target_compile_definitions(${EXECUTABLE_ARTIFACT} PRIVATE -DENABLE_DFU)
-    endif()
-    if(USE_NOR)
-        target_compile_definitions(${EXECUTABLE_ARTIFACT} PRIVATE -DENABLE_NOR)
     endif()
     if(USE_WDT)
         target_compile_definitions(${EXECUTABLE_ARTIFACT} PRIVATE -DENABLE_WDT)

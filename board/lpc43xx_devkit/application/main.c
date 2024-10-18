@@ -4,64 +4,41 @@
  * Project is distributed under the terms of the GNU General Public License v3.0
  */
 
+#include "accel.h"
 #include "board.h"
 #include "tasks.h"
+#include "trace.h"
 #include <halm/core/cortex/nvic.h>
 #include <halm/platform/lpc/clocking.h>
 #include <xcore/interface.h>
 #include <stdio.h>
 #include <stdlib.h>
 /*----------------------------------------------------------------------------*/
-extern unsigned long _saccel;
-extern unsigned long _eaccel;
-extern unsigned long _siaccel;
-/*----------------------------------------------------------------------------*/
-#if defined(ENABLE_NOR)
-static void loadAcceleratedCode(void)
-{
-  register unsigned long *dst __asm__ ("r0");
-  register unsigned long *src __asm__ ("r1");
-
-  /* Copy the accelerated code from Flash to RAM */
-  for (dst = &_saccel, src = &_siaccel; dst < &_eaccel;)
-    *dst++ = *src++;
-}
-#endif
-/*----------------------------------------------------------------------------*/
 #if defined(ENABLE_NOR) && defined(ENABLE_DBG)
-static void showClockFrequencies(struct Interface *serial)
+static void showClockFrequencies(void)
 {
   uint32_t frequency;
-  size_t count;
-  char text[64];
 
   frequency = clockFrequency(ExternalOsc);
-  count = sprintf(text, "XTAL  %lu\r\n", (unsigned long)frequency);
-  ifWrite(serial, text, count);
+  debugTrace("XTAL  %lu", (unsigned long)frequency);
 
   frequency = clockFrequency(MainClock);
-  count = sprintf(text, "MAIN  %lu\r\n", (unsigned long)frequency);
-  ifWrite(serial, text, count);
+  debugTrace("MAIN  %lu", (unsigned long)frequency);
 
   frequency = clockFrequency(SdioClock);
-  count = sprintf(text, "SDMMC %lu\r\n", (unsigned long)frequency);
-  ifWrite(serial, text, count);
+  debugTrace("SDMMC %lu", (unsigned long)frequency);
 
   frequency = clockFrequency(SpifiClock);
-  count = sprintf(text, "SPIFI %lu\r\n", (unsigned long)frequency);
-  ifWrite(serial, text, count);
+  debugTrace("SPIFI %lu", (unsigned long)frequency);
 
   frequency = clockFrequency(SystemPll);
-  count = sprintf(text, "PLL   %lu\r\n", (unsigned long)frequency);
-  ifWrite(serial, text, count);
+  debugTrace("PLL   %lu", (unsigned long)frequency);
 }
 #endif
 /*----------------------------------------------------------------------------*/
 int main(void)
 {
-#ifdef ENABLE_NOR
   loadAcceleratedCode();
-#endif
 
   struct Board * const board = malloc(sizeof(struct Board));
   appBoardInit(board);
@@ -80,7 +57,7 @@ int main(void)
   board->debug.idle = clockFrequency(MainClock) / 10;
 
 #  ifdef ENABLE_NOR
-  showClockFrequencies(board->system.serial);
+  showClockFrequencies();
 #  endif
 #endif /* ENABLE_DBG */
 

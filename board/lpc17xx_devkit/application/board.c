@@ -8,6 +8,7 @@
 #include "dfu_defs.h"
 #include "memory.h"
 #include "tasks.h"
+#include "trace.h"
 #include <halm/core/cortex/nvic.h>
 #include <halm/generic/work_queue.h>
 #include <halm/gpio_bus.h>
@@ -56,6 +57,7 @@ void appBoardInit(struct Board *board)
 #ifdef ENABLE_DBG
   board->system.serial = boardMakeSerial();
   assert(board->system.serial != NULL);
+  debugTraceInit(board->system.serial, NULL);
 #else
   board->system.serial = NULL;
 #endif

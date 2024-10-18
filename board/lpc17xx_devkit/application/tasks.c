@@ -10,6 +10,7 @@
 #include "partitions.h"
 #include "player.h"
 #include "tasks.h"
+#include "trace.h"
 #include <dpm/audio/codec.h>
 #include <dpm/audio/tlv320aic3x.h>
 #include <halm/gpio_bus.h>
@@ -63,23 +64,16 @@ static void onBusError(void *argument, void *device)
 {
   struct Board * const board = argument;
 
-#ifdef ENABLE_DBG
-  size_t count;
-  char text[64];
-
   if (device == board->codecPackage.amp)
   {
-    count = sprintf(text, "AMP bus error, retry %u\r\n",
+    debugTrace("AMP bus error, retry %u",
         (unsigned int)board->event.ampRetries);
   }
   else
   {
-    count = sprintf(text, "DEC bus error, retry %u\r\n",
+    debugTrace("DEC bus error, retry %u",
         (unsigned int)board->event.codecRetries);
   }
-
-  ifWrite(board->system.serial, text, count);
-#endif
 
   ifSetParam(board->codecPackage.i2c, IF_I2C_BUS_RECOVERY, NULL);
 
@@ -164,14 +158,8 @@ static void onCardMounted(void *argument)
 
   playerScanFiles(&board->player, board->fs.handle);
 
-#ifdef ENABLE_DBG
-  size_t count;
-  char text[64];
-
-  count = sprintf(text, "Card mounted, tracks %lu\r\n",
+  debugTrace("Card mounted, tracks %lu",
       (unsigned long)playerGetTrackCount(&board->player));
-  ifWrite(board->system.serial, text, count);
-#endif
 }
 /*----------------------------------------------------------------------------*/
 static void onCardUnmounted(void *argument)
@@ -183,6 +171,8 @@ static void onCardUnmounted(void *argument)
   pinReset(board->indication.green);
   timerSetValue(board->fs.timer, 0);
   timerEnable(board->fs.timer);
+
+  debugTrace("Card unmounted");
 }
 /*----------------------------------------------------------------------------*/
 static void onConversionCompleted(void *argument)
@@ -224,22 +214,12 @@ static void onMountTimerEvent(void *argument)
 }
 /*----------------------------------------------------------------------------*/
 static void onPlayerFormatChanged(void *argument, uint32_t rate,
-    uint8_t channels)
+    [[maybe_unused]] uint8_t channels)
 {
   struct Board * const board = argument;
 
-#ifdef ENABLE_DBG
-  size_t count;
-  char text[64];
-
-  count = sprintf(text, "Player rate %lu channels %lu\r\n",
-      (unsigned long)rate,
-      (unsigned long)channels
-  );
-  ifWrite(board->system.serial, text, count);
-#else
-  (void)channels;
-#endif
+  debugTrace("Player rate %lu channels %lu",
+      (unsigned long)rate, (unsigned long)channels);
 
   ifSetParam(board->audio.i2s, IF_RATE, &rate);
   codecSetSampleRate(board->codecPackage.codec, rate);
@@ -250,22 +230,19 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
   struct Board * const board = argument;
 
 #ifdef ENABLE_DBG
-  static const char *stateNameMap[] = {
+  static const char * const stateNameMap[] = {
       "PLAYING", "PAUSED", "STOPPED", "ERROR"
   };
-  size_t count;
   const size_t index = playerGetCurrentTrack(&board->player);
   const size_t total = playerGetTrackCount(&board->player);
   const char * const name = playerGetTrackName(&board->player);
-  char text[64 + TRACK_PATH_LENGTH];
 
-  count = sprintf(text, "Player state %s track %lu/%lu name \"%s\"\r\n",
+  debugTrace("Player state %s track %lu/%lu name \"%s\"",
       stateNameMap[state],
       (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
       (unsigned long)total,
       name != NULL ? name : ""
   );
-  ifWrite(board->system.serial, text, count);
 
   ampSetDebugValue(board->codecPackage.amp,
       (state == PLAYER_PLAYING || state == PLAYER_PAUSED) ? 0x20 : 0x00);
@@ -400,13 +377,7 @@ static void seedRandomTask(void *argument)
 
   srand(seed);
 
-#ifdef ENABLE_DBG
-  size_t count;
-  char text[64];
-
-  count = sprintf(text, "Seed %lu\r\n", (unsigned long)seed);
-  ifWrite(board->system.serial, text, count);
-#endif
+  debugTrace("Seed %lu", (unsigned long)seed);
 }
 /*----------------------------------------------------------------------------*/
 static void startupTask(void *argument)
@@ -505,14 +476,7 @@ static void volumeChangedTask(void *argument)
   codecSetOutputGain(board->codecPackage.codec, CHANNEL_BOTH,
       board->analogPackage.value);
 
-#ifdef ENABLE_DBG
-  size_t count;
-  char text[64];
-
-  count = sprintf(text, "Volume level %lu\r\n",
-      (unsigned long)board->analogPackage.value);
-  ifWrite(board->system.serial, text, count);
-#endif
+  debugTrace("Volume level %lu", (unsigned long)board->analogPackage.value);
 }
 /*----------------------------------------------------------------------------*/
 #ifdef ENABLE_DBG
@@ -531,11 +495,7 @@ static void debugInfoTask(void *argument)
   const unsigned int load = board->debug.idle > 100 ?
       loops / (board->debug.idle / 100) : 100;
 
-  size_t count;
-  char text[64];
-
-  count = sprintf(text, "Heap %u ticks %u cpu %u%%\r\n", used, loops, load);
-  ifWrite(board->system.serial, text, count);
+  debugTrace("Heap %u ticks %u cpu %u%%", used, loops, load);
 }
 #endif
 /*----------------------------------------------------------------------------*/
