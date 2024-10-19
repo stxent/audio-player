@@ -233,7 +233,11 @@ bool ampIsReady(const void *object)
 void ampSetDebugValue(void *object, uint8_t value)
 {
   struct Amplifier * const amp = object;
+
   amp->leds = value;
+  amp->changed = true;
+
+  invokeUpdate(amp);
 }
 /*----------------------------------------------------------------------------*/
 void ampReset(void *object, uint8_t gain, bool enabled)

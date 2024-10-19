@@ -64,6 +64,7 @@ struct Board
     uint8_t codecRetries;
 
     bool mount;
+    bool seeded;
     bool volume;
   } event;
 
@@ -74,11 +75,19 @@ struct Board
 
   struct
   {
+    unsigned int seed;
+    unsigned short iteration;
+  } rng;
+
+  struct
+  {
     struct Timer *chrono;
     struct Timer *timer;
 
     uint32_t idle;
     uint32_t loops;
+
+    enum PlayerState state;
   } debug;
 };
 /*----------------------------------------------------------------------------*/

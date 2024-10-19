@@ -23,7 +23,13 @@
 #include <halm/platform/lpc/wdt.h>
 #include <string.h>
 /*----------------------------------------------------------------------------*/
-#define ENABLE_SPI_DMA
+#define DMA_SPI_ENABLE
+
+#define DMA_ADC       4
+#define DMA_I2S_RX    1
+#define DMA_I2S_TX    0
+#define DMA_SPI_RX    2
+#define DMA_SPI_TX    3
 /*----------------------------------------------------------------------------*/
 #define PRI_TIMER_DBG 2
 
@@ -120,11 +126,11 @@ struct Interface *boardMakeI2S(void)
           .sck = PIN(0, 7),
           .ws = PIN(0, 8),
           .mclk = BOARD_CODEC_CLOCK_PIN,
-          .dma = 0
+          .dma = DMA_I2S_TX
       },
       .rx = {
           .sda = PIN(0, 6),
-          .dma = 1
+          .dma = DMA_I2S_RX
       },
       .priority = PRI_I2S,
       .channel = 0,
@@ -152,7 +158,7 @@ struct Interface *boardMakeSerial(void)
 {
   static const struct SerialConfig serialConfig = {
       .rxLength = 16,
-      .txLength = 128,
+      .txLength = 256,
       .rate = 115200,
       .rx = 0,
       .tx = PIN(0, 15),
@@ -165,7 +171,7 @@ struct Interface *boardMakeSerial(void)
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeSPI(void)
 {
-#ifdef ENABLE_SPI_DMA
+#ifdef DMA_SPI_ENABLE
   static const struct SpiDmaConfig spiConfig = {
       .rate = 25000000,
       .miso = PIN(0, 17),
@@ -173,12 +179,12 @@ struct Interface *boardMakeSPI(void)
       .sck = PIN(1, 20),
       .channel = 0,
       .mode = 3,
-      .dma = {2, 3}
+      .dma = {DMA_SPI_RX, DMA_SPI_TX}
   };
 
   return init(SpiDma, &spiConfig);
 #else
-  static const struct SpiConfig spiConfig[] = {
+  static const struct SpiConfig spiConfig = {
       .rate = 25000000,
       .miso = PIN(0, 17),
       .mosi = PIN(0, 18),
@@ -213,7 +219,7 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
       .frequency = 400000,
       .event = ADC_TIMER1_MAT1,
       .channel = 0,
-      .dma = 4
+      .dma = DMA_ADC
   };
   static const struct GpTimerConfig adcTimerConfig = {
       .frequency = 1000000,

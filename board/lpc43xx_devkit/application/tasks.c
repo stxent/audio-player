@@ -13,10 +13,10 @@
 #include "trace.h"
 #include <dpm/audio/codec.h>
 #include <dpm/audio/tlv320aic3x.h>
+#include <dpm/button_complex.h>
 #include <halm/gpio_bus.h>
 #include <halm/generic/i2c.h>
 #include <halm/generic/mmcsd.h>
-#include <halm/interrupt.h>
 #include <halm/timer.h>
 #include <halm/watchdog.h>
 #include <halm/wq.h>
@@ -31,6 +31,7 @@ static void onButtonPlayNextPressed(void *);
 static void onButtonPlayPausePressed(void *);
 static void onButtonPlayPreviousPressed(void *);
 static void onButtonStopPlayingPressed(void *);
+static void onButtonSwitchShufflePressed(void *);
 static void onCardMounted(void *);
 static void onCardUnmounted(void *);
 static void onConversionCompleted(void *);
@@ -44,13 +45,16 @@ static void mountTask(void *);
 static void playNextTask(void *);
 static void playPauseTask(void *);
 static void playPreviousTask(void *);
+static void seedRandomTask(void *);
 static void startupTask(void *);
 static void stopPlayingTask(void *);
+static void switchShuffleTask(void *);
 static void unmountTask(void *);
 static void volumeChangedTask(void *);
 
 #ifdef ENABLE_DBG
 static void debugInfoTask(void *);
+static void debugLedsUpdate(void *);
 static void onLoadTimerOverflow(void *);
 #endif
 /*----------------------------------------------------------------------------*/
@@ -136,6 +140,11 @@ static void onButtonStopPlayingPressed(void *argument)
   wqAdd(WQ_DEFAULT, stopPlayingTask, argument);
 }
 /*----------------------------------------------------------------------------*/
+static void onButtonSwitchShufflePressed(void *argument)
+{
+  wqAdd(WQ_DEFAULT, switchShuffleTask, argument);
+}
+/*----------------------------------------------------------------------------*/
 static void onCardMounted(void *argument)
 {
   struct Board * const board = argument;
@@ -172,6 +181,22 @@ static void onConversionCompleted(void *argument)
   board->guard.adc = true;
   ifRead(board->analogPackage.adc, &sample, sizeof(sample));
 
+  /* Platform has 10-bit left-aligned ADC */
+  if (!board->event.seeded)
+  {
+    if (board->rng.iteration)
+    {
+      board->rng.seed = (board->rng.seed << 1) | ((sample >> 6) & 1);
+      --board->rng.iteration;
+    }
+
+    if (!board->rng.iteration)
+    {
+      if (wqAdd(WQ_DEFAULT, seedRandomTask, argument) == E_OK)
+        board->event.seeded = true;
+    }
+  }
+
   const int current = sample >> 8;
   const int previous = board->analogPackage.value;
 
@@ -194,7 +219,8 @@ static void onMountTimerEvent(void *argument)
 {
   struct Board * const board = argument;
 
-  if (!board->event.mount && board->fs.handle == NULL)
+  /* Card should be mounted after RNG initialization */
+  if (board->event.seeded && !board->event.mount && board->fs.handle == NULL)
   {
     if (wqAdd(WQ_DEFAULT, mountTask, board) == E_OK)
       board->event.mount = true;
@@ -232,8 +258,8 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       name != NULL ? name : ""
   );
 
-  ampSetDebugValue(board->codecPackage.amp,
-      (state == PLAYER_PLAYING || state == PLAYER_PAUSED) ? 0x20 : 0x00);
+  board->debug.state = state;
+  debugLedsUpdate(board);
 #endif
 
   switch (state)
@@ -357,6 +383,14 @@ static void playPreviousTask(void *argument)
   playerPlayPrevious(&board->player);
 }
 /*----------------------------------------------------------------------------*/
+static void seedRandomTask(void *argument)
+{
+  const struct Board * const board = argument;
+
+  srand(board->rng.seed);
+  debugTrace("Seed %lu", (unsigned long)board->rng.seed);
+}
+/*----------------------------------------------------------------------------*/
 static void startupTask(void *argument)
 {
   struct Board * const board = argument;
@@ -389,23 +423,19 @@ static void startupTask(void *argument)
   /* Enable base timer for timer factory */
   timerEnable(board->chronoPackage.timer);
 
-#ifdef ENABLE_DBG
-  timerSetCallback(board->debug.timer, onLoadTimerOverflow, board);
-  timerSetOverflow(board->debug.timer, timerGetFrequency(board->debug.timer));
-  timerEnable(board->debug.timer);
-#endif
-
   /* Connect and enable buttons */
-  interruptSetCallback(board->buttonPackage.buttons[0],
+  buttonComplexSetPressCallback(board->buttonPackage.buttons[0],
       onButtonPlayPreviousPressed, board);
-  interruptSetCallback(board->buttonPackage.buttons[1],
+  buttonComplexSetPressCallback(board->buttonPackage.buttons[1],
       onButtonStopPlayingPressed, board);
-  interruptSetCallback(board->buttonPackage.buttons[2],
+  buttonComplexSetLongPressCallback(board->buttonPackage.buttons[1],
+      onButtonSwitchShufflePressed, board);
+  buttonComplexSetPressCallback(board->buttonPackage.buttons[2],
       onButtonPlayPausePressed, board);
-  interruptSetCallback(board->buttonPackage.buttons[3],
+  buttonComplexSetPressCallback(board->buttonPackage.buttons[3],
       onButtonPlayNextPressed, board);
   for (size_t i = 0; i < ARRAY_SIZE(board->buttonPackage.buttons); ++i)
-    interruptEnable(board->buttonPackage.buttons[i]);
+    buttonComplexEnable(board->buttonPackage.buttons[i]);
 
   /* Enqueue power amplifier configuration */
   ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
@@ -415,12 +445,41 @@ static void startupTask(void *argument)
 
   /* Enable SD card power */
   pinSet(board->system.power);
+
+#ifdef ENABLE_DBG
+  timerSetCallback(board->debug.timer, onLoadTimerOverflow, board);
+  timerSetOverflow(board->debug.timer, timerGetFrequency(board->debug.timer));
+  timerEnable(board->debug.timer);
+
+  debugLedsUpdate(board);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 static void stopPlayingTask(void *argument)
 {
   struct Board * const board = argument;
   playerStopPlaying(&board->player);
+}
+/*----------------------------------------------------------------------------*/
+static void switchShuffleTask(void *argument)
+{
+  struct Board * const board = argument;
+
+  playerShuffleControl(&board->player, !playerGetShuffleState(&board->player));
+
+  if (board->fs.handle != NULL)
+    playerScanFiles(&board->player, board->fs.handle);
+
+  if (board->fs.handle != NULL)
+  {
+    debugTrace("Shuffle %s, tracks %lu",
+        playerGetShuffleState(&board->player) ? "enabled" : "disabled",
+        (unsigned long)playerGetTrackCount(&board->player));
+  }
+
+#ifdef ENABLE_DBG
+  debugLedsUpdate(board);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 static void unmountTask(void *argument)
@@ -468,6 +527,25 @@ static void debugInfoTask(void *argument)
       loops / (board->debug.idle / 100) : 100;
 
   debugTrace("Heap %u ticks %u cpu %u%%", used, loops, load);
+}
+#endif
+/*----------------------------------------------------------------------------*/
+#ifdef ENABLE_DBG
+static void debugLedsUpdate(void *argument)
+{
+  struct Board * const board = argument;
+  uint8_t leds = 0;
+
+  if (playerGetShuffleState(&board->player))
+    leds |= 0x10;
+
+  if (board->debug.state == PLAYER_PLAYING
+      || board->debug.state == PLAYER_PAUSED)
+  {
+    leds |= 0x20;
+  }
+
+  ampSetDebugValue(board->codecPackage.amp, leds);
 }
 #endif
 /*----------------------------------------------------------------------------*/

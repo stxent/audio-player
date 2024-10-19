@@ -33,7 +33,7 @@
 /*----------------------------------------------------------------------------*/
 DEFINE_WQ_IRQ(WQ_LP)
 
-struct Button;
+struct ButtonComplex;
 struct Entity;
 struct GpioBus;
 struct Interface;
@@ -50,7 +50,7 @@ struct AnalogPackage
 
 struct ButtonPackage
 {
-  struct Button *buttons[4];
+  struct ButtonComplex *buttons[4];
   struct Interrupt *events[4];
   struct Timer *timers[4];
 };

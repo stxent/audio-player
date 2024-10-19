@@ -83,6 +83,8 @@ struct Board
 
     uint32_t idle;
     uint32_t loops;
+
+    enum PlayerState state;
   } debug;
 };
 /*----------------------------------------------------------------------------*/

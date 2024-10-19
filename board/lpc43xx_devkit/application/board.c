@@ -9,7 +9,7 @@
 #include "memory.h"
 #include "tasks.h"
 #include "trace.h"
-#include <dpm/button.h>
+#include <dpm/button_complex.h>
 #include <halm/core/cortex/nvic.h>
 #include <halm/generic/work_queue.h>
 #include <halm/platform/lpc/backup_domain.h>
@@ -36,9 +36,12 @@ void appBoardCheckBoot(struct Board *board)
   uint32_t value = 0;
 
   for (size_t i = 0; i < ARRAY_SIZE(board->buttonPackage.buttons); ++i)
-    value |= pinRead(board->buttonPackage.buttons[i]->pin) ? (1 << i) : 0;
+  {
+    if (buttonComplexIsPressed(board->buttonPackage.buttons[i]))
+      value |= 1 << i;
+  }
 
-  if (!(value & DFU_BUTTON_MASK))
+  if (value == DFU_BUTTON_MASK)
   {
     *(uint32_t *)backupDomainAddress() = DFU_START_REQUEST;
     nvicResetCore();
@@ -105,12 +108,17 @@ void appBoardInit(struct Board *board)
   board->event.ampRetries = 0;
   board->event.codecRetries = 0;
   board->event.mount = false;
+  board->event.seeded = false;
   board->event.volume = false;
 
   board->guard.adc = false;
 
+  board->rng.iteration = sizeof(board->rng.seed) * 8;
+  board->rng.seed = 0;
+
   board->debug.idle = 0;
   board->debug.loops = 0;
+  board->debug.state = PLAYER_STOPPED;
   board->debug.chrono = boardMakeChronoTimer();
   assert(board->debug.chrono != NULL);
   board->debug.timer = boardMakeLoadTimer();
@@ -119,8 +127,10 @@ void appBoardInit(struct Board *board)
   /* Initialize player instance */
   ready = ready && playerInit(&board->player, board->audio.rx, board->audio.tx,
       I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH, TRACK_COUNT,
-      rxBuffers, txBuffers, trackBuffers, NULL);
+      rxBuffers, txBuffers, trackBuffers, rand);
   assert(ready);
+
+  playerShuffleControl(&board->player, true);
 
 #ifdef ENABLE_DBG
   debugTraceInit(board->system.serial, board->debug.chrono);

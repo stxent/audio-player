@@ -825,6 +825,11 @@ size_t playerGetCurrentTrack(const struct Player *player)
   return player->playback.index;
 }
 /*----------------------------------------------------------------------------*/
+bool playerGetShuffleState(const struct Player *player)
+{
+  return player->shuffle;
+}
+/*----------------------------------------------------------------------------*/
 size_t playerGetTrackCount(const struct Player *player)
 {
   return pathArraySize(&player->tracks);

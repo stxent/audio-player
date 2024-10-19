@@ -8,7 +8,7 @@
 #include "board_shared.h"
 #include <dpm/audio/tlv320aic3x.h>
 #include <dpm/bus_handler.h>
-#include <dpm/button.h>
+#include <dpm/button_complex.h>
 #include <halm/core/cortex/systick.h>
 #include <halm/delay.h>
 #include <halm/generic/timer_factory.h>
@@ -20,8 +20,17 @@
 #include <halm/platform/lpc/pin_int.h>
 #include <halm/platform/lpc/sdmmc.h>
 #include <halm/platform/lpc/serial.h>
+#include <halm/platform/lpc/serial_dma.h>
 #include <halm/platform/lpc/wdt.h>
 #include <string.h>
+/*----------------------------------------------------------------------------*/
+#define DMA_SERIAL_ENABLE
+
+#define DMA_ADC       2
+#define DMA_I2S_RX    1
+#define DMA_I2S_TX    0
+#define DMA_SERIAL_RX 3
+#define DMA_SERIAL_TX 4
 /*----------------------------------------------------------------------------*/
 #define PRI_TIMER_DBG 2
 
@@ -123,11 +132,11 @@ struct Interface *boardMakeI2S(void)
           .sck = PIN(PORT_4, 7),
           .ws = PIN(PORT_7, 1),
           .mclk = PIN(PORT_CLK, 2),
-          .dma = 0
+          .dma = DMA_I2S_TX
       },
       .rx = {
           .sda = PIN(PORT_6, 2),
-          .dma = 1
+          .dma = DMA_I2S_RX
       },
       .priority = PRI_I2S,
       .channel = 0,
@@ -156,9 +165,23 @@ struct Interface *boardMakeSDMMC(void)
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeSerial(void)
 {
+#ifdef DMA_SERIAL_ENABLE
+  static const struct SerialDmaConfig serialConfig = {
+      .rxChunks = 2,
+      .rxLength = 32,
+      .txLength = 256,
+      .rate = 115200,
+      .rx = PIN(PORT_1, 14),
+      .tx = PIN(PORT_5, 6),
+      .channel = 1,
+      .dma = {DMA_SERIAL_RX, DMA_SERIAL_TX}
+  };
+
+  return init(SerialDma, &serialConfig);
+#else
   static const struct SerialConfig serialConfig = {
       .rxLength = 16,
-      .txLength = 128,
+      .txLength = 256,
       .rate = 115200,
       .rx = PIN(PORT_1, 14),
       .tx = PIN(PORT_5, 6),
@@ -167,6 +190,7 @@ struct Interface *boardMakeSerial(void)
   };
 
   return init(Serial, &serialConfig);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 struct Watchdog *boardMakeWatchdog(void)
@@ -188,7 +212,7 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
       .pins = adcPins,
       .event = ADC_CTOUT_15,
       .channel = 0,
-      .dma = 2
+      .dma = DMA_ADC
   };
   static const struct GpTimerConfig adcTimerConfig = {
       .frequency = 1000000,
@@ -261,14 +285,15 @@ static const struct PinIntConfig buttonIntConfigs[] = {
     if (package->timers[i] == NULL)
       return false;
 
-    const struct ButtonConfig buttonConfig = {
+    const struct ButtonComplexConfig buttonConfig = {
         .interrupt = package->events[i],
         .timer = package->timers[i],
         .pin = buttonIntConfigs[i].pin,
         .delay = 3,
+        .hold = 50,
         .level = false
     };
-    package->buttons[i] = init(Button, &buttonConfig);
+    package->buttons[i] = init(ButtonComplex, &buttonConfig);
     if (package->buttons[i] == NULL)
       return false;
   }

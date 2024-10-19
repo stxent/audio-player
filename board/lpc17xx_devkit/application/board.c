@@ -118,6 +118,7 @@ void appBoardInit(struct Board *board)
 
   board->debug.idle = 0;
   board->debug.loops = 0;
+  board->debug.state = PLAYER_STOPPED;
   board->debug.chrono = boardMakeChronoTimer();
   assert(board->debug.chrono != NULL);
   board->debug.timer = boardMakeLoadTimer();

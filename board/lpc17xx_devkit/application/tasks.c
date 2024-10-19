@@ -49,6 +49,7 @@ static void volumeChangedTask(void *);
 
 #ifdef ENABLE_DBG
 static void debugInfoTask(void *);
+static void debugLedsUpdate(void *);
 static void onLoadTimerOverflow(void *);
 #endif
 /*----------------------------------------------------------------------------*/
@@ -160,6 +161,7 @@ static void onConversionCompleted(void *argument)
   uint16_t sample;
 
   ifRead(board->analogPackage.adc, &sample, sizeof(sample));
+  /* Platform has 12-bit left-aligned ADC */
   afAdd(&board->analogPackage.filter, sample >> 4);
 
   if (!board->event.seeded && afSeedReady(&board->analogPackage.filter))
@@ -223,8 +225,8 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       name != NULL ? name : ""
   );
 
-  ampSetDebugValue(board->codecPackage.amp,
-      (state == PLAYER_PLAYING || state == PLAYER_PAUSED) ? 0x20 : 0x00);
+  board->debug.state = state;
+  debugLedsUpdate(board);
 #endif
 
   switch (state)
@@ -382,7 +384,6 @@ static void seedRandomTask(void *argument)
   const uint32_t seed = afSeedValue(&board->analogPackage.filter);
 
   srand(seed);
-
   debugTrace("Seed %lu", (unsigned long)seed);
 }
 /*----------------------------------------------------------------------------*/
@@ -424,12 +425,6 @@ static void startupTask(void *argument)
   /* Enable base timer for timer factory */
   timerEnable(board->chronoPackage.timer);
 
-#ifdef ENABLE_DBG
-  timerSetCallback(board->debug.timer, onLoadTimerOverflow, board);
-  timerSetOverflow(board->debug.timer, timerGetFrequency(board->debug.timer));
-  timerEnable(board->debug.timer);
-#endif
-
   /* Enqueue power amplifier configuration */
   ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
   /* Enqueue audio codec configuration */
@@ -438,6 +433,14 @@ static void startupTask(void *argument)
 
   /* Enable SD card power */
   pinSet(board->system.power);
+
+#ifdef ENABLE_DBG
+  timerSetCallback(board->debug.timer, onLoadTimerOverflow, board);
+  timerSetOverflow(board->debug.timer, timerGetFrequency(board->debug.timer));
+  timerEnable(board->debug.timer);
+
+  debugLedsUpdate(board);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 static void stopPlayingTask(void *argument)
@@ -502,6 +505,25 @@ static void debugInfoTask(void *argument)
       loops / (board->debug.idle / 100) : 100;
 
   debugTrace("Heap %u ticks %u cpu %u%%", used, loops, load);
+}
+#endif
+/*----------------------------------------------------------------------------*/
+#ifdef ENABLE_DBG
+static void debugLedsUpdate(void *argument)
+{
+  struct Board * const board = argument;
+  uint8_t leds = 0;
+
+  if (playerGetShuffleState(&board->player))
+    leds |= 0x10;
+
+  if (board->debug.state == PLAYER_PLAYING
+      || board->debug.state == PLAYER_PAUSED)
+  {
+    leds |= 0x20;
+  }
+
+  ampSetDebugValue(board->codecPackage.amp, leds);
 }
 #endif
 /*----------------------------------------------------------------------------*/

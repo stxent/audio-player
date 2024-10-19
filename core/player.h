@@ -108,6 +108,7 @@ bool playerInit(struct Player *, struct Stream *, struct Stream *,
     size_t, size_t, size_t, size_t, void *, void *, void *, int (*)(void));
 void playerDeinit(struct Player *);
 size_t playerGetCurrentTrack(const struct Player *);
+bool playerGetShuffleState(const struct Player *);
 size_t playerGetTrackCount(const struct Player *);
 const char *playerGetTrackName(struct Player *);
 void playerPlayNext(struct Player *);
