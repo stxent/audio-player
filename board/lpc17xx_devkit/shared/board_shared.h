@@ -83,6 +83,8 @@ struct ChronoPackage
   struct TimerFactory *factory;
 
   struct Timer *guardTimer;
+  struct Timer *inputTimer;
+  struct Timer *mountTimer;
 };
 
 struct CodecPackage
@@ -100,10 +102,9 @@ BEGIN_DECLS
 
 struct Entity *boardMakeAmp(struct Interface *, struct Timer *);
 struct Entity *boardMakeCodec(struct Interface *, struct Timer *);
-struct Timer *boardMakeCodecTimer(void);
+struct Timer *boardMakeChronoTimer(void);
 struct Timer *boardMakeLoadTimer(void);
 struct Timer *boardMakeMemoryTimer(void);
-struct Timer *boardMakeMountTimer(void);
 struct Interface *boardMakeI2C(void);
 struct Interface *boardMakeI2S(void);
 struct Interface *boardMakeSDIO(struct Interface *, struct Timer *);
@@ -112,7 +113,7 @@ struct Interface *boardMakeSPI(void);
 struct Watchdog *boardMakeWatchdog(void);
 
 bool boardSetupAnalogPackage(struct AnalogPackage *);
-bool boardSetupButtonPackage(struct ButtonPackage *);
+bool boardSetupButtonPackage(struct ButtonPackage *, struct TimerFactory *);
 bool boardSetupChronoPackage(struct ChronoPackage *);
 bool boardSetupCodecPackage(struct CodecPackage *, struct TimerFactory *);
 bool boardSetupClock(void);

@@ -47,7 +47,7 @@ void appBoardCheckBoot(struct Board *board)
 /*----------------------------------------------------------------------------*/
 void appBoardInit(struct Board *board)
 {
-  bool ready = boardSetupClock();
+  [[maybe_unused]] bool ready = boardSetupClock();
 
 #ifdef ENABLE_WDT
   /* Enable watchdog prior to all other peripherals */
@@ -60,7 +60,6 @@ void appBoardInit(struct Board *board)
 #ifdef ENABLE_DBG
   board->system.serial = boardMakeSerial();
   assert(board->system.serial != NULL);
-  debugTraceInit(board->system.serial, NULL);
 #else
   board->system.serial = NULL;
 #endif
@@ -97,8 +96,6 @@ void appBoardInit(struct Board *board)
   board->audio.tx = i2sDmaGetOutput((struct I2SDma *)board->audio.i2s);
 
   board->fs.handle = NULL;
-  board->fs.timer = boardMakeMountTimer();
-  assert(board->fs.timer != NULL);
 
   board->memory.card = NULL;
   board->memory.wrapper = NULL;
@@ -114,6 +111,8 @@ void appBoardInit(struct Board *board)
 
   board->debug.idle = 0;
   board->debug.loops = 0;
+  board->debug.chrono = boardMakeChronoTimer();
+  assert(board->debug.chrono != NULL);
   board->debug.timer = boardMakeLoadTimer();
   assert(board->debug.timer != NULL);
 
@@ -121,9 +120,12 @@ void appBoardInit(struct Board *board)
   ready = ready && playerInit(&board->player, board->audio.rx, board->audio.tx,
       I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH, TRACK_COUNT,
       rxBuffers, txBuffers, trackBuffers, NULL);
-
   assert(ready);
-  (void)ready;
+
+#ifdef ENABLE_DBG
+  debugTraceInit(board->system.serial, board->debug.chrono);
+  timerEnable(board->debug.chrono);
+#endif
 }
 /*----------------------------------------------------------------------------*/
 int appBoardStart(struct Board *)

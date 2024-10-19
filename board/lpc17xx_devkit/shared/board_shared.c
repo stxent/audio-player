@@ -17,7 +17,6 @@
 #include <halm/platform/lpc/gptimer.h>
 #include <halm/platform/lpc/i2c.h>
 #include <halm/platform/lpc/i2s_dma.h>
-#include <halm/platform/lpc/rit.h>
 #include <halm/platform/lpc/serial.h>
 #include <halm/platform/lpc/spi.h>
 #include <halm/platform/lpc/spi_dma.h>
@@ -28,15 +27,14 @@
 /*----------------------------------------------------------------------------*/
 #define PRI_TIMER_DBG 2
 
-#define PRI_TIMER_I2C 1
-#define PRI_TIMER_MEM 1
 #define PRI_I2C       1
 #define PRI_I2S       1
 #define PRI_SERIAL    1
 #define PRI_SPI       1
+#define PRI_TIMER_MEM 1
+#define PRI_TIMER_SYS 1
 /* GPDMA 1 */
 
-#define PRI_TIMER_SYS 0
 /* WQ_LP 0 */
 /*----------------------------------------------------------------------------*/
 struct Entity *boardMakeAmp(struct Interface *i2c, struct Timer *timer)
@@ -65,42 +63,37 @@ struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
   return init(TLV320AIC3x, &codecConfig);
 }
 /*----------------------------------------------------------------------------*/
-struct Timer *boardMakeCodecTimer(void)
+struct Timer *boardMakeChronoTimer(void)
 {
-  static const struct GpTimerConfig codecTimerConfig = {
-      .frequency = 1000000,
-      .priority = PRI_TIMER_I2C,
+  static const struct GpTimerConfig timerConfig = {
+      .frequency = 1000,
+      .priority = PRI_TIMER_SYS,
       .channel = 2
   };
 
-  return init(GpTimer, &codecTimerConfig);
+  return init(GpTimer, &timerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeLoadTimer(void)
 {
-  static const struct GpTimerConfig loadTimerConfig = {
+  static const struct GpTimerConfig timerConfig = {
       .frequency = 1000000,
       .priority = PRI_TIMER_DBG,
       .channel = 3
   };
 
-  return init(GpTimer, &loadTimerConfig);
+  return init(GpTimer, &timerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Timer *boardMakeMemoryTimer(void)
 {
-  static const struct GpTimerConfig memoryTimerConfig = {
+  static const struct GpTimerConfig timerConfig = {
       .frequency = 1000000,
       .priority = PRI_TIMER_MEM,
       .channel = 0
   };
 
-  return init(GpTimer, &memoryTimerConfig);
-}
-/*----------------------------------------------------------------------------*/
-struct Timer *boardMakeMountTimer(void)
-{
-  return init(Rit, &(struct RitConfig){PRI_TIMER_SYS});
+  return init(GpTimer, &timerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2C(void)
@@ -249,7 +242,8 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
   return true;
 }
 /*----------------------------------------------------------------------------*/
-bool boardSetupButtonPackage(struct ButtonPackage *package)
+bool boardSetupButtonPackage(struct ButtonPackage *package,
+    struct TimerFactory *factory)
 {
   static const PinNumber busPins[] = {
       BOARD_BUTTON_1_PIN,
@@ -270,7 +264,7 @@ bool boardSetupButtonPackage(struct ButtonPackage *package)
   if (package->buttons == NULL)
     return false;
 
-  package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
+  package->timer = timerFactoryCreate(factory);
   if (package->timer == NULL)
     return false;
 
@@ -283,7 +277,7 @@ bool boardSetupChronoPackage(struct ChronoPackage *package)
   package->factory = NULL;
   package->guardTimer = NULL;
 
-  package->timer = boardMakeCodecTimer();
+  package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
   if (package->timer == NULL)
     return false;
   timerSetOverflow(package->timer, timerGetFrequency(package->timer) / 1000);
@@ -297,6 +291,10 @@ bool boardSetupChronoPackage(struct ChronoPackage *package)
 
   package->guardTimer = timerFactoryCreate(package->factory);
   if (package->guardTimer == NULL)
+    return false;
+
+  package->mountTimer = timerFactoryCreate(package->factory);
+  if (package->mountTimer == NULL)
     return false;
 
   return true;

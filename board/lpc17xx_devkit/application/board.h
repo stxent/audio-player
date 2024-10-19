@@ -32,7 +32,6 @@ struct Board
   struct
   {
     struct FsHandle *handle;
-    struct Timer *timer;
   } fs;
 
   struct
@@ -79,6 +78,7 @@ struct Board
 
   struct
   {
+    struct Timer *chrono;
     struct Timer *timer;
 
     uint32_t idle;

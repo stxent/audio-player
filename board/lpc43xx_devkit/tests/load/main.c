@@ -55,7 +55,7 @@ int main(void)
   struct Interface * const serial = boardMakeSerial();
   assert(serial != NULL);
 
-  struct Timer * const baseTimer = boardMakeMountTimer();
+  struct Timer * const baseTimer = boardMakeChronoTimer();
   assert(baseTimer != NULL);
   timerSetCallback(baseTimer, onFlushTimerOverflow, serial);
   timerSetOverflow(baseTimer, timerGetFrequency(baseTimer) * SAMPLE_COUNT);

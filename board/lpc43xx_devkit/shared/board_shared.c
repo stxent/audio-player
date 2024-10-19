@@ -18,7 +18,6 @@
 #include <halm/platform/lpc/i2c.h>
 #include <halm/platform/lpc/i2s_dma.h>
 #include <halm/platform/lpc/pin_int.h>
-#include <halm/platform/lpc/rit.h>
 #include <halm/platform/lpc/sdmmc.h>
 #include <halm/platform/lpc/serial.h>
 #include <halm/platform/lpc/wdt.h>
@@ -30,12 +29,12 @@
 #define PRI_I2S       1
 #define PRI_SDMMC     1
 #define PRI_SERIAL    1
-#define PRI_TIMER_SYS 0
+#define PRI_TIMER_SYS 1
 /* GPDMA 1 */
 
 /* WQ_LP 0 */
 /*----------------------------------------------------------------------------*/
-[[gnu::alias("boardMakeI2C0")]] struct Interface *boardMakeI2C(void);
+[[gnu::alias("boardMakeI2C1")]] struct Interface *boardMakeI2C(void);
 /*----------------------------------------------------------------------------*/
 [[gnu::section(".shared")]] static struct ClockSettings sharedClockSettings;
 /*----------------------------------------------------------------------------*/
@@ -65,20 +64,26 @@ struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
   return init(TLV320AIC3x, &codecConfig);
 }
 /*----------------------------------------------------------------------------*/
+struct Timer *boardMakeChronoTimer(void)
+{
+  static const struct GpTimerConfig timerConfig = {
+      .frequency = 1000,
+      .priority = PRI_TIMER_SYS,
+      .channel = 2
+  };
+
+  return init(GpTimer, &timerConfig);
+}
+/*----------------------------------------------------------------------------*/
 struct Timer *boardMakeLoadTimer(void)
 {
-  static const struct GpTimerConfig loadTimerConfig = {
+  static const struct GpTimerConfig timerConfig = {
       .frequency = 1000000,
       .priority = PRI_TIMER_DBG,
       .channel = 1
   };
 
-  return init(GpTimer, &loadTimerConfig);
-}
-/*----------------------------------------------------------------------------*/
-struct Timer *boardMakeMountTimer(void)
-{
-  return init(Rit, &(struct RitConfig){PRI_TIMER_SYS});
+  return init(GpTimer, &timerConfig);
 }
 /*----------------------------------------------------------------------------*/
 struct Interface *boardMakeI2C0(void)
@@ -290,6 +295,10 @@ bool boardSetupChronoPackage(struct ChronoPackage *package)
 
   package->guardTimer = timerFactoryCreate(package->factory);
   if (package->guardTimer == NULL)
+    return false;
+
+  package->mountTimer = timerFactoryCreate(package->factory);
+  if (package->mountTimer == NULL)
     return false;
 
   return true;

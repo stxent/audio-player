@@ -35,6 +35,7 @@ static void onMountTimerEvent(void *);
 static void onPlayerFormatChanged(void *, uint32_t, uint8_t);
 static void onPlayerStateChanged(void *, enum PlayerState);
 
+static void buttonCheckTask(void *);
 static void guardCheckTask(void *);
 static void mountTask(void *);
 static void playNextTask(void *);
@@ -124,36 +125,14 @@ static void onBusIdle(void *argument, void *device)
 /*----------------------------------------------------------------------------*/
 static void onButtonCheckEvent(void *argument)
 {
-  static const uint8_t buttonDebounceThreshold = 3;
-
-  struct Board * const board = argument;
-  const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
-
-  board->guard.button = true;
-
-  for (size_t i = 0; i < ARRAY_SIZE(board->buttonPackage.debounce); ++i)
-  {
-    if (!(value & (1 << i)))
-    {
-      if (board->buttonPackage.debounce[i] < buttonDebounceThreshold)
-      {
-        if (++board->buttonPackage.debounce[i] == buttonDebounceThreshold)
-          wqAdd(WQ_DEFAULT, buttonTaskMap[i], board);
-      }
-    }
-    else
-    {
-      if (board->buttonPackage.debounce[i] > 0)
-        --board->buttonPackage.debounce[i];
-    }
-  }
+  wqAdd(WQ_LP, buttonCheckTask, argument);
 }
 /*----------------------------------------------------------------------------*/
 static void onCardMounted(void *argument)
 {
   struct Board * const board = argument;
 
-  timerDisable(board->fs.timer);
+  timerDisable(board->chronoPackage.mountTimer);
   pinSet(board->indication.green);
 
   playerScanFiles(&board->player, board->fs.handle);
@@ -169,8 +148,8 @@ static void onCardUnmounted(void *argument)
   playerResetFiles(&board->player);
 
   pinReset(board->indication.green);
-  timerSetValue(board->fs.timer, 0);
-  timerEnable(board->fs.timer);
+  timerSetValue(board->chronoPackage.mountTimer, 0);
+  timerEnable(board->chronoPackage.mountTimer);
 
   debugTrace("Card unmounted");
 }
@@ -218,11 +197,11 @@ static void onPlayerFormatChanged(void *argument, uint32_t rate,
 {
   struct Board * const board = argument;
 
-  debugTrace("Player rate %lu channels %lu",
-      (unsigned long)rate, (unsigned long)channels);
-
   ifSetParam(board->audio.i2s, IF_RATE, &rate);
   codecSetSampleRate(board->codecPackage.codec, rate);
+
+  debugTrace("Player rate %lu channels %lu",
+      (unsigned long)rate, (unsigned long)channels);
 }
 /*----------------------------------------------------------------------------*/
 static void onPlayerStateChanged(void *argument, enum PlayerState state)
@@ -273,6 +252,33 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       pinReset(board->indication.red);
       wqAdd(WQ_DEFAULT, unmountTask, board);
       break;
+  }
+}
+/*----------------------------------------------------------------------------*/
+static void buttonCheckTask(void *argument)
+{
+  static const uint8_t buttonDebounceThreshold = 3;
+
+  struct Board * const board = argument;
+  const uint32_t value = gpioBusRead(board->buttonPackage.buttons);
+
+  board->guard.button = true;
+
+  for (size_t i = 0; i < ARRAY_SIZE(board->buttonPackage.debounce); ++i)
+  {
+    if (!(value & (1 << i)))
+    {
+      if (board->buttonPackage.debounce[i] < buttonDebounceThreshold)
+      {
+        if (++board->buttonPackage.debounce[i] == buttonDebounceThreshold)
+          wqAdd(WQ_DEFAULT, buttonTaskMap[i], board);
+      }
+    }
+    else
+    {
+      if (board->buttonPackage.debounce[i] > 0)
+        --board->buttonPackage.debounce[i];
+    }
   }
 }
 /*----------------------------------------------------------------------------*/
@@ -397,17 +403,17 @@ static void startupTask(void *argument)
       timerGetFrequency(board->buttonPackage.timer) / 100);
   timerEnable(board->buttonPackage.timer);
 
-  /* 1 Hz card check rate */
-  timerSetCallback(board->fs.timer, onMountTimerEvent, board);
-  timerSetOverflow(board->fs.timer,
-      timerGetFrequency(board->fs.timer));
-  timerEnable(board->fs.timer);
-
   /* 2 Hz watchdog update task */
   timerSetCallback(board->chronoPackage.guardTimer, onGuardTimerEvent, board);
   timerSetOverflow(board->chronoPackage.guardTimer,
       timerGetFrequency(board->chronoPackage.guardTimer) / 2);
   timerEnable(board->chronoPackage.guardTimer);
+
+  /* 1 Hz card check rate */
+  timerSetCallback(board->chronoPackage.mountTimer, onMountTimerEvent, board);
+  timerSetOverflow(board->chronoPackage.mountTimer,
+      timerGetFrequency(board->chronoPackage.mountTimer));
+  timerEnable(board->chronoPackage.mountTimer);
 
   /* 2 * 100 Hz ADC trigger rate, start ADC sampling */
   ifSetParam(board->analogPackage.adc, IF_ENABLE, NULL);

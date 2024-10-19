@@ -14,6 +14,7 @@
 #include <dpm/audio/codec.h>
 #include <dpm/audio/tlv320aic3x.h>
 #include <halm/gpio_bus.h>
+#include <halm/generic/i2c.h>
 #include <halm/generic/mmcsd.h>
 #include <halm/interrupt.h>
 #include <halm/timer.h>
@@ -67,6 +68,8 @@ static void onBusError(void *argument, void *device)
     debugTrace("DEC bus error, retry %u",
         (unsigned int)board->event.codecRetries);
   }
+
+  ifSetParam(board->codecPackage.i2c, IF_I2C_BUS_RECOVERY, NULL);
 
   if (device == board->codecPackage.amp)
   {
@@ -137,7 +140,7 @@ static void onCardMounted(void *argument)
 {
   struct Board * const board = argument;
 
-  timerDisable(board->fs.timer);
+  timerDisable(board->chronoPackage.mountTimer);
   pinSet(board->indication.green);
 
   playerScanFiles(&board->player, board->fs.handle);
@@ -153,8 +156,8 @@ static void onCardUnmounted(void *argument)
   playerResetFiles(&board->player);
 
   pinReset(board->indication.green);
-  timerSetValue(board->fs.timer, 0);
-  timerEnable(board->fs.timer);
+  timerSetValue(board->chronoPackage.mountTimer, 0);
+  timerEnable(board->chronoPackage.mountTimer);
 
   debugTrace("Card unmounted");
 }
@@ -365,17 +368,17 @@ static void startupTask(void *argument)
 
   ifSetCallback(board->analogPackage.adc, onConversionCompleted, board);
 
-  /* 1 Hz card check rate */
-  timerSetCallback(board->fs.timer, onMountTimerEvent, board);
-  timerSetOverflow(board->fs.timer,
-      timerGetFrequency(board->fs.timer));
-  timerEnable(board->fs.timer);
-
   /* 2 Hz watchdog update task */
   timerSetCallback(board->chronoPackage.guardTimer, onGuardTimerEvent, board);
   timerSetOverflow(board->chronoPackage.guardTimer,
       timerGetFrequency(board->chronoPackage.guardTimer) / 2);
   timerEnable(board->chronoPackage.guardTimer);
+
+  /* 1 Hz card check rate */
+  timerSetCallback(board->chronoPackage.mountTimer, onMountTimerEvent, board);
+  timerSetOverflow(board->chronoPackage.mountTimer,
+      timerGetFrequency(board->chronoPackage.mountTimer));
+  timerEnable(board->chronoPackage.mountTimer);
 
   /* 2 * 100 Hz ADC trigger rate, start ADC sampling */
   ifSetParam(board->analogPackage.adc, IF_ENABLE, NULL);
