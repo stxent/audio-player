@@ -96,8 +96,7 @@ static void onBusError(void *argument, void *device)
       ++board->event.codecRetries;
 
       pinReset(board->indication.indB);
-      codecReset(board->codecPackage.codec, 44100,
-          CODEC_INPUT_PATH, CODEC_OUTPUT_PATH);
+      codecReset(board->codecPackage.codec);
     }
   }
 }
@@ -428,8 +427,11 @@ static void startupTask(void *argument)
   /* Enqueue power amplifier configuration */
   ampReset(board->codecPackage.amp, AMP_GAIN_MIN, false);
   /* Enqueue audio codec configuration */
-  codecReset(board->codecPackage.codec, 44100,
-      CODEC_INPUT_PATH, CODEC_OUTPUT_PATH);
+  codecReset(board->codecPackage.codec);
+  codecSetInputPath(board->codecPackage.codec, CODEC_INPUT_PATH,
+      CHANNEL_BOTH);
+  codecSetOutputPath(board->codecPackage.codec, CODEC_OUTPUT_PATH,
+      CHANNEL_BOTH);
 
   /* Enable SD card power */
   pinSet(board->system.power);

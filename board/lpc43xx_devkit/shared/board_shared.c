@@ -66,6 +66,7 @@ struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
       .timer = timer,
       .address = 0x18,
       .rate = 0,
+      .samplerate = 44100,
       .prescaler = 0,
       .reset = BOARD_CODEC_RESET_PIN
   };
