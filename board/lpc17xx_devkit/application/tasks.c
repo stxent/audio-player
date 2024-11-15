@@ -429,9 +429,9 @@ static void startupTask(void *argument)
   /* Enqueue audio codec configuration */
   codecReset(board->codecPackage.codec);
   codecSetInputPath(board->codecPackage.codec, CODEC_INPUT_PATH,
-      CHANNEL_BOTH);
+      CHANNEL_LEFT | CHANNEL_RIGHT);
   codecSetOutputPath(board->codecPackage.codec, CODEC_OUTPUT_PATH,
-      CHANNEL_BOTH);
+      CHANNEL_LEFT | CHANNEL_RIGHT);
 
   /* Enable SD card power */
   pinSet(board->system.power);
@@ -484,7 +484,7 @@ static void volumeChangedTask(void *argument)
     return;
 
   board->analogPackage.value = (uint8_t)current;
-  codecSetOutputGain(board->codecPackage.codec, CHANNEL_BOTH,
+  codecSetOutputGain(board->codecPackage.codec, CHANNEL_LEFT | CHANNEL_RIGHT,
       board->analogPackage.value);
 
   debugTrace("Volume level %lu", (unsigned long)board->analogPackage.value);
