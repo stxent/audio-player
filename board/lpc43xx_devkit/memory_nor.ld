@@ -4,7 +4,7 @@
  */
 
 ENTRY(RESET_ISR)
-EXTERN(vectorTable)
+EXTERN(vector_table)
 
 /* Suppress newlib warnings */
 EXTERN(__assert_func)
@@ -93,7 +93,7 @@ SECTIONS
     _ebss = .;
 
     . = ALIGN(4);
-    heapStart = .;
+    heap_start = .;
   } >SRAM1
 
   .sram2 (NOLOAD) : ALIGN(4)
@@ -181,7 +181,7 @@ SECTIONS
     *(.gnu.linkonce.armextab.*)
   }
 
-  PROVIDE(end = heapStart);
+  PROVIDE(end = heap_start);
   PROVIDE(_stack = ORIGIN(SRAM1) + LENGTH(SRAM1));
 
   PROVIDE(_seeprom = ORIGIN(EEPROM));

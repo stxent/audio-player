@@ -30,6 +30,7 @@ list(APPEND SHARED_SOURCES "${PROJECT_BINARY_DIR}/version.c")
 
 # Shared package
 add_library(shared ${SHARED_SOURCES})
+target_compile_definitions(shared PUBLIC ${FLAGS_BOARD})
 target_include_directories(shared PUBLIC "${BOARD}/shared")
 target_link_options(shared PUBLIC SHELL:${FLAGS_CPU} SHELL:${FLAGS_LINKER})
 # Shared library depends on includes from core object library

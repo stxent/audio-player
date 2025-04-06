@@ -15,9 +15,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
-/* #define AUDIOBOX_V1 */
-
-#ifdef AUDIOBOX_V1
+#if DEVICE_VERSION != 1 /* Version 2 or later */
 #  define BOARD_ADC_PIN         PIN(0, 2)
 #  define BOARD_BUTTON_1_PIN    PIN(1, 26) /* Previous */
 #  define BOARD_BUTTON_2_PIN    PIN(4, 28) /* Stop */

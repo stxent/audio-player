@@ -222,16 +222,14 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
       .channel = 3
   };
 
-  package->timer = NULL;
-
   package->adc = init(AdcDma, &adcConfig);
   if (package->adc == NULL)
     return false;
 
   /*
-  * The overflow frequency of the timer should be two times higher
-  * than that of the hardware events for ADC.
-  */
+   * The overflow frequency of the timer should be two times higher
+   * than that of the hardware events for ADC.
+   */
   package->timer = init(GpTimer, &adcTimerConfig);
   if (package->timer == NULL)
     return false;
@@ -272,13 +270,6 @@ static const struct PinIntConfig buttonIntConfigs[] = {
 
   for (size_t i = 0; i < ARRAY_SIZE(buttonIntConfigs); ++i)
   {
-    package->buttons[i] = NULL;
-    package->events[i] = NULL;
-    package->timers[i] = NULL;
-  }
-
-  for (size_t i = 0; i < ARRAY_SIZE(buttonIntConfigs); ++i)
-  {
     package->events[i] = init(PinInt, &buttonIntConfigs[i]);
     if (package->events[i] == NULL)
       return false;
@@ -305,18 +296,13 @@ static const struct PinIntConfig buttonIntConfigs[] = {
 /*----------------------------------------------------------------------------*/
 bool boardSetupChronoPackage(struct ChronoPackage *package)
 {
-  package->factory = NULL;
-  package->guardTimer = NULL;
-
   package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
   if (package->timer == NULL)
     return false;
   timerSetOverflow(package->timer, timerGetFrequency(package->timer) / 1000);
 
-  const struct TimerFactoryConfig timerFactoryConfig = {
-      .timer = package->timer
-  };
-  package->factory = init(TimerFactory, &timerFactoryConfig);
+  package->factory = init(TimerFactory,
+      &(struct TimerFactoryConfig){package->timer});
   if (package->factory == NULL)
     return false;
 
@@ -334,11 +320,6 @@ bool boardSetupChronoPackage(struct ChronoPackage *package)
 bool boardSetupCodecPackage(struct CodecPackage *package,
     struct TimerFactory *factory)
 {
-  package->ampTimer = NULL;
-  package->amp = NULL;
-  package->codecTimer = NULL;
-  package->codec = NULL;
-
   package->i2c = boardMakeI2C();
   if (package->i2c == NULL)
     return false;

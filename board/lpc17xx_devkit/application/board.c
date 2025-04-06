@@ -10,15 +10,38 @@
 #include "tasks.h"
 #include "trace.h"
 #include <halm/core/cortex/nvic.h>
+#include <halm/delay.h>
 #include <halm/generic/work_queue.h>
 #include <halm/gpio_bus.h>
 #include <halm/platform/lpc/backup_domain.h>
 #include <halm/platform/lpc/i2s_dma.h>
 #include <halm/timer.h>
+#include <halm/watchdog.h>
 #include <assert.h>
+#include <stdio.h>
 /*----------------------------------------------------------------------------*/
 #define DFU_BUTTON_MASK 0x00000006UL
 
+enum [[gnu::packed]] InitStep
+{
+  INIT_CLOCK          = 0,
+  INIT_WATCHDOG       = 1,
+  INIT_SERIAL         = 2,
+  INIT_WORK_QUEUE     = 3,
+  INIT_PACKAGE_ANALOG = 4,
+  INIT_PACKAGE_CHRONO = 5,
+  INIT_PACKAGE_BUTTON = 6,
+  INIT_PACKAGE_CODEC  = 7,
+  INIT_AUDIO          = 8,
+  INIT_MEMORY_TIMER   = 9,
+  INIT_MEMORY_BUS     = 10,
+  INIT_MEMORY_SDIO    = 11,
+  INIT_DEBUG          = 12,
+  INIT_PLAYER         = 13
+};
+/*----------------------------------------------------------------------------*/
+static void panic(struct Board *, enum InitStep);
+/*----------------------------------------------------------------------------*/
 DECLARE_WQ_IRQ(WQ_LP, SPI_ISR)
 /*----------------------------------------------------------------------------*/
 static const struct WorkQueueConfig workQueueConfig = {
@@ -30,6 +53,29 @@ static const struct WorkQueueIrqConfig workQueueIrqConfig = {
     .irq = SPI_IRQ,
     .priority = 0
 };
+/*----------------------------------------------------------------------------*/
+static void panic(struct Board *board, enum InitStep step)
+{
+  if (board->system.serial != NULL)
+  {
+    char text[80];
+    size_t count;
+
+    count = sprintf(text, "Panic on init step %d\r\n", (unsigned int)step);
+    ifWrite(board->system.serial, text, count);
+  }
+
+  while (1)
+  {
+    if (board->system.watchdog != NULL)
+      watchdogReload(board->system.watchdog);
+
+    pinToggle(board->indication.red);
+    pinToggle(board->indication.green);
+    pinToggle(board->indication.blue);
+    mdelay(500);
+  }
+}
 /*----------------------------------------------------------------------------*/
 void appBoardCheckBoot(struct Board *board)
 {
@@ -44,28 +90,10 @@ void appBoardCheckBoot(struct Board *board)
 /*----------------------------------------------------------------------------*/
 void appBoardInit(struct Board *board)
 {
-  [[maybe_unused]] bool ready = boardSetupClock();
-
-#ifdef ENABLE_WDT
-  /* Enable watchdog prior to all other peripherals */
-  board->system.watchdog = boardMakeWatchdog();
-  assert(board->system.watchdog != NULL);
-#else
-  board->system.watchdog = NULL;
-#endif
-
-#ifdef ENABLE_DBG
-  board->system.serial = boardMakeSerial();
-  assert(board->system.serial != NULL);
-#else
   board->system.serial = NULL;
-#endif
+  board->system.watchdog = NULL;
 
-  /* Initialize Work Queue */
-  WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
-  assert(WQ_DEFAULT != NULL);
-  WQ_LP = init(WorkQueueIrq, &workQueueIrqConfig);
-  assert(WQ_LP != NULL);
+  const bool ready = boardSetupClock();
 
   board->system.power = pinInit(BOARD_POWER_PIN);
   pinOutput(board->system.power, false);
@@ -80,22 +108,56 @@ void appBoardInit(struct Board *board)
   board->indication.indB = pinInit(BOARD_LED_IND_B_PIN);
   pinOutput(board->indication.indB, false);
 
-  ready = ready && boardSetupAnalogPackage(&board->analogPackage);
-  ready = ready && boardSetupChronoPackage(&board->chronoPackage);
-  ready = ready && boardSetupButtonPackage(&board->buttonPackage,
-      board->chronoPackage.factory);
-  ready = ready && boardSetupCodecPackage(&board->codecPackage,
-      board->chronoPackage.factory);
+  if (!ready)
+    panic(board, INIT_CLOCK);
+
+#ifdef ENABLE_WDT
+  /* Enable watchdog prior to all other peripherals */
+  board->system.watchdog = boardMakeWatchdog();
+  if (board->system.watchdog == NULL)
+    panic(board, INIT_WATCHDOG);
+#endif
+
+#ifdef ENABLE_DBG
+  board->system.serial = boardMakeSerial();
+  if (board->system.serial == NULL)
+    panic(board, INIT_SERIAL);
+#endif
+
+  /* Initialize Work Queue */
+  WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
+  if (WQ_DEFAULT == NULL)
+    panic(board, INIT_WORK_QUEUE);
+  WQ_LP = init(WorkQueueIrq, &workQueueIrqConfig);
+  if (WQ_LP == NULL)
+    panic(board, INIT_WORK_QUEUE);
+
+  if (!boardSetupAnalogPackage(&board->analogPackage))
+    panic(board, INIT_PACKAGE_ANALOG);
+  if (!boardSetupChronoPackage(&board->chronoPackage))
+    panic(board, INIT_PACKAGE_CHRONO);
+  if (!boardSetupButtonPackage(&board->buttonPackage,
+      board->chronoPackage.factory))
+  {
+    panic(board, INIT_PACKAGE_BUTTON);
+  }
+  if (!boardSetupCodecPackage(&board->codecPackage,
+      board->chronoPackage.factory))
+  {
+    panic(board, INIT_PACKAGE_CODEC);
+  }
 
   board->audio.i2s = boardMakeI2S();
-  assert(board->audio.i2s != NULL);
+  if (board->audio.i2s == NULL)
+    panic(board, INIT_AUDIO);
   board->audio.rx = i2sDmaGetInput((struct I2SDma *)board->audio.i2s);
   board->audio.tx = i2sDmaGetOutput((struct I2SDma *)board->audio.i2s);
 
   board->fs.handle = NULL;
 
   board->memory.timer = boardMakeMemoryTimer();
-  assert(board->memory.timer != NULL);
+  if (board->memory.timer == NULL)
+    panic(board, INIT_MEMORY_TIMER);
   /* Configure 5 kHz event rate */
   timerSetOverflow(board->memory.timer,
       timerGetFrequency(board->memory.timer) / 5000);
@@ -103,9 +165,11 @@ void appBoardInit(struct Board *board)
   board->memory.card = NULL;
   board->memory.wrapper = NULL;
   board->memory.spi = boardMakeSPI();
-  assert(board->memory.spi != NULL);
+  if (board->memory.spi == NULL)
+    panic(board, INIT_MEMORY_BUS);
   board->memory.sdio = boardMakeSDIO(board->memory.spi, board->memory.timer);
-  assert(board->memory.sdio != NULL);
+  if (board->memory.sdio == NULL)
+    panic(board, INIT_MEMORY_SDIO);
 
   board->event.ampRetries = 0;
   board->event.codecRetries = 0;
@@ -120,15 +184,19 @@ void appBoardInit(struct Board *board)
   board->debug.loops = 0;
   board->debug.state = PLAYER_STOPPED;
   board->debug.chrono = boardMakeChronoTimer();
-  assert(board->debug.chrono != NULL);
+  if (board->debug.chrono == NULL)
+    panic(board, INIT_DEBUG);
   board->debug.timer = boardMakeLoadTimer();
-  assert(board->debug.timer != NULL);
+  if (board->debug.timer == NULL)
+    panic(board, INIT_DEBUG);
 
   /* Initialize player instance */
-  ready = ready && playerInit(&board->player, board->audio.rx, board->audio.tx,
+  if (!playerInit(&board->player, board->audio.rx, board->audio.tx,
       I2S_BUFFER_COUNT, I2S_RX_BUFFER_LENGTH, I2S_TX_BUFFER_LENGTH, TRACK_COUNT,
-      rxBuffers, txBuffers, trackBuffers, rand);
-  assert(ready);
+      rxBuffers, txBuffers, trackBuffers, rand))
+  {
+    panic(board, INIT_PLAYER);
+  }
 
   playerShuffleControl(&board->player, true);
 
