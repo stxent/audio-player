@@ -8,7 +8,6 @@
 #define CORE_PARTITIONS_H_
 /*----------------------------------------------------------------------------*/
 #include <xcore/interface.h>
-#include <stdbool.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
 struct PartitionDescriptor

@@ -8,7 +8,6 @@
 #define CORE_ANALOG_FILTER_H_
 /*----------------------------------------------------------------------------*/
 #include <xcore/helpers.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/

@@ -8,7 +8,6 @@
 #define CORE_AMPLIFIER_H_
 /*----------------------------------------------------------------------------*/
 #include <xcore/entity.h>
-#include <stdbool.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
 #define AMP_ADDRESS   0x15

@@ -12,7 +12,6 @@
 #include <halm/generic/work_queue_irq.h>
 #include <halm/pin.h>
 #include <xcore/helpers.h>
-#include <stdbool.h>
 #include <stdint.h>
 /*----------------------------------------------------------------------------*/
 #define BOARD_ADC_PIN         PIN(PORT_ADC, 0)
