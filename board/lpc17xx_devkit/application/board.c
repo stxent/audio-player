@@ -56,7 +56,7 @@ static const struct WorkQueueIrqConfig workQueueIrqConfig = {
 /*----------------------------------------------------------------------------*/
 static void panic(struct Board *board, enum InitStep step)
 {
-  if (board->system.serial != NULL)
+  if (board->system.serial != nullptr)
   {
     char text[80];
     size_t count;
@@ -67,7 +67,7 @@ static void panic(struct Board *board, enum InitStep step)
 
   while (1)
   {
-    if (board->system.watchdog != NULL)
+    if (board->system.watchdog != nullptr)
       watchdogReload(board->system.watchdog);
 
     pinToggle(board->indication.red);
@@ -90,8 +90,8 @@ void appBoardCheckBoot(struct Board *board)
 /*----------------------------------------------------------------------------*/
 void appBoardInit(struct Board *board)
 {
-  board->system.serial = NULL;
-  board->system.watchdog = NULL;
+  board->system.serial = nullptr;
+  board->system.watchdog = nullptr;
 
   const bool ready = boardSetupClock();
 
@@ -114,22 +114,22 @@ void appBoardInit(struct Board *board)
 #ifdef ENABLE_WDT
   /* Enable watchdog prior to all other peripherals */
   board->system.watchdog = boardMakeWatchdog();
-  if (board->system.watchdog == NULL)
+  if (board->system.watchdog == nullptr)
     panic(board, INIT_WATCHDOG);
 #endif
 
 #ifdef ENABLE_DBG
   board->system.serial = boardMakeSerial();
-  if (board->system.serial == NULL)
+  if (board->system.serial == nullptr)
     panic(board, INIT_SERIAL);
 #endif
 
   /* Initialize Work Queue */
   WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
-  if (WQ_DEFAULT == NULL)
+  if (WQ_DEFAULT == nullptr)
     panic(board, INIT_WORK_QUEUE);
   WQ_LP = init(WorkQueueIrq, &workQueueIrqConfig);
-  if (WQ_LP == NULL)
+  if (WQ_LP == nullptr)
     panic(board, INIT_WORK_QUEUE);
 
   if (!boardSetupAnalogPackage(&board->analogPackage))
@@ -148,27 +148,27 @@ void appBoardInit(struct Board *board)
   }
 
   board->audio.i2s = boardMakeI2S();
-  if (board->audio.i2s == NULL)
+  if (board->audio.i2s == nullptr)
     panic(board, INIT_AUDIO);
   board->audio.rx = i2sDmaGetInput((struct I2SDma *)board->audio.i2s);
   board->audio.tx = i2sDmaGetOutput((struct I2SDma *)board->audio.i2s);
 
-  board->fs.handle = NULL;
+  board->fs.handle = nullptr;
 
   board->memory.timer = boardMakeMemoryTimer();
-  if (board->memory.timer == NULL)
+  if (board->memory.timer == nullptr)
     panic(board, INIT_MEMORY_TIMER);
   /* Configure 5 kHz event rate */
   timerSetOverflow(board->memory.timer,
       timerGetFrequency(board->memory.timer) / 5000);
 
-  board->memory.card = NULL;
-  board->memory.wrapper = NULL;
+  board->memory.card = nullptr;
+  board->memory.wrapper = nullptr;
   board->memory.spi = boardMakeSPI();
-  if (board->memory.spi == NULL)
+  if (board->memory.spi == nullptr)
     panic(board, INIT_MEMORY_BUS);
   board->memory.sdio = boardMakeSDIO(board->memory.spi, board->memory.timer);
-  if (board->memory.sdio == NULL)
+  if (board->memory.sdio == nullptr)
     panic(board, INIT_MEMORY_SDIO);
 
   board->event.ampRetries = 0;
@@ -182,12 +182,10 @@ void appBoardInit(struct Board *board)
 
   board->debug.idle = 0;
   board->debug.loops = 0;
+  board->debug.timestamp = 0;
   board->debug.state = PLAYER_STOPPED;
-  board->debug.chrono = boardMakeChronoTimer();
-  if (board->debug.chrono == NULL)
-    panic(board, INIT_DEBUG);
-  board->debug.timer = boardMakeLoadTimer();
-  if (board->debug.timer == NULL)
+  board->debug.chrono = boardMakeChronoTimer(true);
+  if (board->debug.chrono == nullptr)
     panic(board, INIT_DEBUG);
 
   /* Initialize player instance */

@@ -73,7 +73,7 @@ static void onBusError(void *argument, void *device)
         (unsigned int)board->event.codecRetries);
   }
 
-  ifSetParam(board->codecPackage.i2c, IF_I2C_BUS_RECOVERY, NULL);
+  ifSetParam(board->codecPackage.i2c, IF_I2C_BUS_RECOVERY, nullptr);
 
   if (device == board->codecPackage.amp)
   {
@@ -219,7 +219,7 @@ static void onMountTimerEvent(void *argument)
   struct Board * const board = argument;
 
   /* Card should be mounted after RNG initialization */
-  if (board->event.seeded && !board->event.mount && board->fs.handle == NULL)
+  if (board->event.seeded && !board->event.mount && board->fs.handle == nullptr)
   {
     if (wqAdd(WQ_DEFAULT, mountTask, board) == E_OK)
       board->event.mount = true;
@@ -254,7 +254,7 @@ static void onPlayerStateChanged(void *argument, enum PlayerState state)
       stateNameMap[state],
       (unsigned long)((total && state != PLAYER_ERROR) ? index + 1 : 0),
       (unsigned long)total,
-      name != NULL ? name : ""
+      name != nullptr ? name : ""
   );
 
   board->debug.state = state;
@@ -301,7 +301,7 @@ static void guardCheckTask(void *argument)
   {
     board->guard.adc = false;
 
-    if (board->system.watchdog != NULL)
+    if (board->system.watchdog != nullptr)
       watchdogReload(board->system.watchdog);
   }
 }
@@ -310,7 +310,7 @@ static void mountTask(void *argument)
 {
   struct Board * const board = argument;
 
-  if (board->fs.handle == NULL)
+  if (board->fs.handle == nullptr)
   {
     const struct MMCSDConfig cardConfig = {
         .interface = board->memory.sdmmc,
@@ -318,16 +318,16 @@ static void mountTask(void *argument)
     };
     board->memory.card = init(MMCSD, &cardConfig);
 
-    if (board->memory.card != NULL)
+    if (board->memory.card != nullptr)
     {
-      ifSetParam(board->memory.card, IF_BLOCKING, NULL);
+      ifSetParam(board->memory.card, IF_BLOCKING, nullptr);
 
       struct InterfaceProxyConfig wrapperConfig = {
           .pipe = board->memory.card
       };
       board->memory.wrapper = init(InterfaceProxy, &wrapperConfig);
 
-      if (board->memory.wrapper != NULL)
+      if (board->memory.wrapper != nullptr)
       {
         struct PartitionDescriptor partition;
 
@@ -341,22 +341,22 @@ static void mountTask(void *argument)
         };
         board->fs.handle = init(FatHandle, &config);
 
-        if (board->fs.handle != NULL)
+        if (board->fs.handle != nullptr)
         {
           onCardMounted(board);
         }
         else
         {
           deinit(board->memory.wrapper);
-          board->memory.wrapper = NULL;
+          board->memory.wrapper = nullptr;
           deinit(board->memory.card);
-          board->memory.card = NULL;
+          board->memory.card = nullptr;
         }
       }
       else
       {
         deinit(board->memory.card);
-        board->memory.card = NULL;
+        board->memory.card = nullptr;
       }
     }
   }
@@ -414,13 +414,13 @@ static void startupTask(void *argument)
   timerEnable(board->chronoPackage.mountTimer);
 
   /* 2 * 100 Hz ADC trigger rate, start ADC sampling */
-  ifSetParam(board->analogPackage.adc, IF_ENABLE, NULL);
+  ifSetParam(board->analogPackage.adc, IF_ENABLE, nullptr);
   timerSetOverflow(board->analogPackage.timer,
       timerGetFrequency(board->analogPackage.timer) / 200);
   timerEnable(board->analogPackage.timer);
 
   /* Enable base timer for timer factory */
-  timerEnable(board->chronoPackage.timer);
+  timerEnable(board->chronoPackage.factory);
 
   /* Connect and enable buttons */
   buttonComplexSetPressCallback(board->buttonPackage.buttons[0],
@@ -449,10 +449,9 @@ static void startupTask(void *argument)
   pinSet(board->system.power);
 
 #ifdef ENABLE_DBG
-  timerSetCallback(board->debug.timer, onLoadTimerOverflow, board);
-  timerSetOverflow(board->debug.timer, timerGetFrequency(board->debug.timer));
-  timerEnable(board->debug.timer);
-
+  timerSetCallback(board->debug.chrono, onLoadTimerOverflow, board);
+  timerSetOverflow(board->debug.chrono, timerGetFrequency(board->debug.chrono));
+  /* Timer is already enabled */
   debugLedsUpdate(board);
 #endif
 }
@@ -469,10 +468,10 @@ static void switchShuffleTask(void *argument)
 
   playerShuffleControl(&board->player, !playerGetShuffleState(&board->player));
 
-  if (board->fs.handle != NULL)
+  if (board->fs.handle != nullptr)
     playerScanFiles(&board->player, board->fs.handle);
 
-  if (board->fs.handle != NULL)
+  if (board->fs.handle != nullptr)
   {
     debugTrace("Shuffle %s, tracks %lu",
         playerGetShuffleState(&board->player) ? "enabled" : "disabled",
@@ -488,14 +487,14 @@ static void unmountTask(void *argument)
 {
   struct Board * const board = argument;
 
-  if (board->fs.handle != NULL)
+  if (board->fs.handle != nullptr)
   {
     deinit(board->fs.handle);
-    board->fs.handle = NULL;
+    board->fs.handle = nullptr;
     deinit(board->memory.wrapper);
-    board->memory.wrapper = NULL;
+    board->memory.wrapper = nullptr;
     deinit(board->memory.card);
-    board->memory.card = NULL;
+    board->memory.card = nullptr;
 
     onCardUnmounted(board);
   }
@@ -561,6 +560,9 @@ static void onLoadTimerOverflow(void *argument)
 
   board->debug.loops = info.loops;
   wqAdd(WQ_DEFAULT, debugInfoTask, board);
+
+  board->debug.timestamp += timerGetFrequency(board->debug.chrono);
+  timerSetOverflow(board->debug.chrono, board->debug.timestamp);
 }
 #endif
 /*----------------------------------------------------------------------------*/

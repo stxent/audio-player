@@ -99,8 +99,8 @@ BEGIN_DECLS
 
 struct Entity *boardMakeAmp(struct Interface *, struct Timer *);
 struct Entity *boardMakeCodec(struct Interface *, struct Timer *);
-struct Timer *boardMakeChronoTimer(void);
-struct Timer *boardMakeLoadTimer(void);
+struct Timer *boardMakeBaseTimer(bool);
+struct Timer *boardMakeChronoTimer(bool);
 struct Timer *boardMakeMemoryTimer(void);
 struct Interface *boardMakeI2C(void);
 struct Interface *boardMakeI2S(void);

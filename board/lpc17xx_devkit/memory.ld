@@ -35,9 +35,9 @@ SECTIONS
 
     *(.vectors)
     *(.text)
-    *(.text*)
+    *(.text.*)
     *(.rodata)
-    *(.rodata*)
+    *(.rodata.*)
 
     _etext = .;
   } >ROM =0xFF
@@ -47,7 +47,7 @@ SECTIONS
     _sdata = .;
 
     *(.data)
-    *(.data*)
+    *(.data.*)
 
     _edata = .;
   } >SRAM0 AT >ROM
@@ -59,7 +59,7 @@ SECTIONS
     _sbss = .;
 
     *(.bss)
-    *(.bss*)
+    *(.bss.*)
     *(COMMON)
 
     _ebss = .;
@@ -68,13 +68,11 @@ SECTIONS
   .sram1 (NOLOAD) : ALIGN(4)
   {
     *(.sram1)
-    *(.sram1*)
   } >SRAM1
 
   .sram2 (NOLOAD) : ALIGN(4)
   {
     *(.sram2)
-    *(.sram2*)
 
     . = ALIGN(4);
     heap_start = .;
@@ -107,9 +105,6 @@ SECTIONS
 
   /DISCARD/ :
   {
-    *(.init)
-    *(.fini)
-
     *(.ARM.exidx*)
     *(.gnu.linkonce.armexidx.*)
 

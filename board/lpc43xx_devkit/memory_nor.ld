@@ -11,8 +11,8 @@ EXTERN(__assert_func)
 
 MEMORY
 {
+  /* SPIFI */
   ROM (rx)   : ORIGIN = ${ROM_ORIGIN}, LENGTH = ${ROM_LENGTH}
-  EEPROM (r) : ORIGIN = 0x20040000, LENGTH = 16K - 128
 
   AHB (rw)   : ORIGIN = 0x40000000, LENGTH = 72K
   RTC (rw)   : ORIGIN = 0x40040000, LENGTH = 64K
@@ -43,7 +43,6 @@ SECTIONS
   .shared (NOLOAD) : ALIGN(4)
   {
     *(.shared)
-    *(.shared*)
   } >SRAM4
 
   .accel : ALIGN(4)
@@ -65,7 +64,7 @@ SECTIONS
     _sdata = .;
 
     *(.data)
-    *(.data*)
+    *(.data.*)
 
     _edata = .;
   } >SRAM1 AT >ROM
@@ -75,9 +74,9 @@ SECTIONS
   .text_other : ALIGN(4)
   {
     *(.text)
-    *(.text*)
+    *(.text.*)
     *(.rodata)
-    *(.rodata*)
+    *(.rodata.*)
 
     _etext = .;
   } >ROM =0xFF
@@ -87,7 +86,7 @@ SECTIONS
     _sbss = .;
 
     *(.bss)
-    *(.bss*)
+    *(.bss.*)
     *(COMMON)
 
     _ebss = .;
@@ -99,19 +98,16 @@ SECTIONS
   .sram2 (NOLOAD) : ALIGN(4)
   {
     *(.sram2)
-    *(.sram2*)
   } >SRAM2
 
   .sram3 (NOLOAD) : ALIGN(4)
   {
     *(.sram3)
-    *(.sram3*)
   } >SRAM3
 
   .sram4 (NOLOAD) : ALIGN(4)
   {
     *(.sram4)
-    *(.sram4*)
   } >SRAM4
 
   .ahb :
@@ -171,9 +167,6 @@ SECTIONS
 
   /DISCARD/ :
   {
-    *(.init)
-    *(.fini)
-
     *(.ARM.exidx*)
     *(.gnu.linkonce.armexidx.*)
 
@@ -183,7 +176,4 @@ SECTIONS
 
   PROVIDE(end = heap_start);
   PROVIDE(_stack = ORIGIN(SRAM1) + LENGTH(SRAM1));
-
-  PROVIDE(_seeprom = ORIGIN(EEPROM));
-  PROVIDE(_eeeprom = ORIGIN(EEPROM) + LENGTH(EEPROM));
 }

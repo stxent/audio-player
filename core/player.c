@@ -281,7 +281,7 @@ static bool fetchNextChunkWAV(struct Player *player, uint8_t *buffer,
 /*----------------------------------------------------------------------------*/
 static bool isDataAvailable(struct FsNode *node)
 {
-  return fsNodeRead(node, FS_NODE_DATA, 0, NULL, 0, NULL) == E_OK;
+  return fsNodeRead(node, FS_NODE_DATA, 0, nullptr, 0, nullptr) == E_OK;
 }
 /*----------------------------------------------------------------------------*/
 static bool isFileSupported(const char *name)
@@ -322,13 +322,13 @@ static void mockStateCallback(void *, enum PlayerState)
 static struct FsNode *openTrack(struct Player *player, size_t position,
     struct TrackInfo *info)
 {
-  assert(player->handle != NULL);
+  assert(player->handle != nullptr);
   assert(position < pathArraySize(&player->tracks));
 
   struct FsNode * const node = fsOpenNode(player->handle,
       pathArrayAt(&player->tracks, position)->data);
 
-  if (node != NULL)
+  if (node != nullptr)
   {
     if (parseHeaderWAV(player, node, info))
     {
@@ -353,26 +353,26 @@ static void playTrack(struct Player *player, size_t start, int dir)
 {
   const size_t count = pathArraySize(&player->tracks);
 
-  if (player->handle == NULL || !count || start >= count)
+  if (player->handle == nullptr || !count || start >= count)
     return;
 
   struct TrackInfo info;
-  struct FsNode *node = NULL;
+  struct FsNode *node = nullptr;
   size_t current = start;
   bool error = false;
 
-  resetPlayback(player, NULL, 0, NULL);
+  resetPlayback(player, nullptr, 0, nullptr);
 
   do
   {
     node = openTrack(player, current, &info);
 
-    if (node != NULL)
+    if (node != nullptr)
     {
       if (info.type == TRACK_UNKNOWN)
       {
         fsNodeFree(node);
-        node = NULL;
+        node = nullptr;
 
         if (dir > 0)
         {
@@ -398,7 +398,7 @@ static void playTrack(struct Player *player, size_t start, int dir)
 
   if (!error)
   {
-    if (node != NULL)
+    if (node != nullptr)
     {
       resetPlayback(player, node, current, &info);
       wqAdd(WQ_DEFAULT, fetchNextChunkTask, player);
@@ -553,25 +553,25 @@ static bool parseHeaderWAV(struct Player *player, struct FsNode *node,
 static void resetPlayback(struct Player *player, struct FsNode *node,
     size_t index, const struct TrackInfo *info)
 {
-  if (player->playback.file != NULL)
+  if (player->playback.file != nullptr)
     fsNodeFree(player->playback.file);
 
   player->bufferPosition = 0;
   player->bufferSize = 0;
   player->playback.stop = false;
 
-  if (node != NULL)
+  if (node != nullptr)
   {
     player->playback.file = node;
     player->playback.index = index;
   }
   else
   {
-    player->playback.file = NULL;
+    player->playback.file = nullptr;
     player->playback.index = 0;
   }
 
-  if (node != NULL && info != NULL)
+  if (node != nullptr && info != nullptr)
   {
     player->playback.info = *info;
     player->playback.playing = true;
@@ -630,7 +630,7 @@ static inline void abortPlayingTask(void *argument)
 {
   struct Player * const player = argument;
 
-  resetPlayback(player, NULL, 0, NULL);
+  resetPlayback(player, nullptr, 0, nullptr);
   player->stateCallback(player->stateCallbackArgument, PLAYER_ERROR);
 }
 /*----------------------------------------------------------------------------*/
@@ -638,7 +638,7 @@ static void fetchNextChunkTask(void *argument)
 {
   struct Player * const player = argument;
 
-  if (player->playback.file == NULL)
+  if (player->playback.file == nullptr)
     return;
 
   for (size_t index = 0; index < player->buffers; ++index)
@@ -701,7 +701,7 @@ static inline void stopPlayingTask(void *argument)
 {
   struct Player * const player = argument;
 
-  if (player->playback.file != NULL)
+  if (player->playback.file != nullptr)
   {
     player->bufferPosition = 0;
     player->bufferSize = 0;
@@ -711,7 +711,7 @@ static inline void stopPlayingTask(void *argument)
   }
   else
   {
-    resetPlayback(player, NULL, 0, NULL);
+    resetPlayback(player, nullptr, 0, nullptr);
   }
 
   player->stateCallback(player->stateCallbackArgument, PLAYER_STOPPED);
@@ -725,14 +725,14 @@ bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
     return false;
 
   player->rxReq = malloc(sizeof(struct StreamRequest) * buffers);
-  if (player->rxReq == NULL)
+  if (player->rxReq == nullptr)
     return false;
 
   player->txReq = malloc(sizeof(struct StreamRequest) * buffers);
-  if (player->txReq == NULL)
+  if (player->txReq == nullptr)
     goto free_rx;
 
-  if (trackArena != NULL)
+  if (trackArena != nullptr)
   {
     player->preallocated = true;
     pathArrayInitArena(&player->tracks, trackCount, trackArena);
@@ -746,26 +746,26 @@ bool playerInit(struct Player *player, struct Stream *rx, struct Stream *tx,
 
 #ifdef CONFIG_ENABLE_MP3
   player->mp3Decoder = MP3InitDecoder();
-  if (player->mp3Decoder == NULL)
+  if (player->mp3Decoder == nullptr)
     goto free_tracks;
 #else
-  player->mp3Decoder = NULL;
+  player->mp3Decoder = nullptr;
 #endif
 
   player->controlCallback = mockControlCallback;
-  player->controlCallbackArgument = NULL;
+  player->controlCallbackArgument = nullptr;
   player->stateCallback = mockStateCallback;
-  player->stateCallbackArgument = NULL;
+  player->stateCallbackArgument = nullptr;
   player->random = random;
   player->shuffle = false;
 
   player->rx = rx;
   player->tx = tx;
   player->buffers = buffers;
-  player->handle = NULL;
+  player->handle = nullptr;
 
-  player->playback.file = NULL;
-  resetPlayback(player, NULL, 0, NULL);
+  player->playback.file = nullptr;
+  resetPlayback(player, nullptr, 0, nullptr);
 
   uint8_t *rxPosition = rxArena;
   uint8_t *txPosition = txArena;
@@ -843,7 +843,7 @@ const char *playerGetTrackName(struct Player *player)
         pathArrayAt(&player->tracks, player->playback.index)->data);
   }
   else
-    return NULL;
+    return nullptr;
 }
 /*----------------------------------------------------------------------------*/
 void playerPlayNext(struct Player *player)
@@ -859,7 +859,7 @@ void playerPlayNext(struct Player *player)
 /*----------------------------------------------------------------------------*/
 void playerPlayPause(struct Player *player)
 {
-  if (player->playback.file == NULL)
+  if (player->playback.file == nullptr)
   {
     /* Playback was stopped, play from the beginning of the list */
     playTrack(player, 0, 1);
@@ -894,23 +894,23 @@ void playerPlayPrevious(struct Player *player)
 void playerResetFiles(struct Player *player)
 {
   pathArrayClear(&player->tracks);
-  resetPlayback(player, NULL, 0, NULL);
-  player->handle = NULL;
+  resetPlayback(player, nullptr, 0, nullptr);
+  player->handle = nullptr;
 }
 /*----------------------------------------------------------------------------*/
 static void scanNodeDescendants(struct Player *player, struct FsNode *root,
     const char *base, unsigned int level)
 {
   static const unsigned int dirMaxLevel = 2;
-  struct FsNode *child = NULL;
+  struct FsNode *child = nullptr;
 
   for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
   {
-    if ((child = fsNodeHead(root)) != NULL)
+    if ((child = fsNodeHead(root)) != nullptr)
       break;
   }
 
-  if (child != NULL)
+  if (child != nullptr)
   {
     enum Result res = E_OK;
 
@@ -922,7 +922,7 @@ static void scanNodeDescendants(struct Player *player, struct FsNode *root,
       for (unsigned int retries = 0; retries < MAX_READ_RETRIES; ++retries)
       {
         res = fsNodeRead(child, FS_NODE_NAME, 0, name.data, sizeof(name),
-            NULL);
+            nullptr);
 
         if (res == E_OK)
           break;
@@ -965,14 +965,14 @@ static void scanNodeDescendants(struct Player *player, struct FsNode *root,
 /*----------------------------------------------------------------------------*/
 void playerScanFiles(struct Player *player, struct FsHandle *handle)
 {
-  assert(handle != NULL);
+  assert(handle != nullptr);
 
   pathArrayClear(&player->tracks);
-  resetPlayback(player, NULL, 0, NULL);
+  resetPlayback(player, nullptr, 0, nullptr);
 
   struct FsNode * const root = fsHandleRoot(handle);
 
-  if (root != NULL)
+  if (root != nullptr)
   {
     player->handle = handle;
 
@@ -988,20 +988,20 @@ void playerScanFiles(struct Player *player, struct FsHandle *handle)
     }
   }
   else
-    player->handle = NULL;
+    player->handle = nullptr;
 }
 /*----------------------------------------------------------------------------*/
 void playerSetControlCallback(struct Player *player,
     void (*callback)(void *, uint32_t, uint8_t), void *argument)
 {
-  if (callback != NULL)
+  if (callback != nullptr)
   {
     player->controlCallbackArgument = argument;
     player->controlCallback = callback;
   }
   else
   {
-    player->controlCallbackArgument = NULL;
+    player->controlCallbackArgument = nullptr;
     player->controlCallback = mockControlCallback;
   }
 }
@@ -1009,21 +1009,21 @@ void playerSetControlCallback(struct Player *player,
 void playerSetStateCallback(struct Player *player,
     void (*callback)(void *, enum PlayerState), void *argument)
 {
-  if (callback != NULL)
+  if (callback != nullptr)
   {
     player->stateCallbackArgument = argument;
     player->stateCallback = callback;
   }
   else
   {
-    player->stateCallbackArgument = NULL;
+    player->stateCallbackArgument = nullptr;
     player->stateCallback = mockStateCallback;
   }
 }
 /*----------------------------------------------------------------------------*/
 void playerShuffleControl(struct Player *player, bool enable)
 {
-  assert(!enable || player->random != NULL);
+  assert(!enable || player->random != nullptr);
   player->shuffle = enable;
 }
 /*----------------------------------------------------------------------------*/

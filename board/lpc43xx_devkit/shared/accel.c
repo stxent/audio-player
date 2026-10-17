@@ -13,8 +13,8 @@ extern unsigned long _siaccel;
 #ifdef ENABLE_NOR
 void loadAcceleratedCode(void)
 {
-  register unsigned long *dst __asm__ ("r0");
-  register unsigned long *src __asm__ ("r1");
+  unsigned long *dst;
+  unsigned long *src;
 
   /* Copy the accelerated code from Flash to RAM */
   for (dst = &_saccel, src = &_siaccel; dst < &_eaccel;)

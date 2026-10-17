@@ -53,16 +53,16 @@ int main(void)
   boardSetupClock();
 
   struct Interface * const serial = boardMakeSerial();
-  assert(serial != NULL);
+  assert(serial != nullptr);
 
-  struct Timer * const baseTimer = boardMakeChronoTimer();
-  assert(baseTimer != NULL);
+  struct Timer * const baseTimer = boardMakeBaseTimer(false);
+  assert(baseTimer != nullptr);
   timerSetCallback(baseTimer, onFlushTimerOverflow, serial);
   timerSetOverflow(baseTimer, timerGetFrequency(baseTimer) * SAMPLE_COUNT);
 
-  struct Timer * const loadTimer = boardMakeLoadTimer();
-  assert(loadTimer != NULL);
-  timerSetCallback(loadTimer, onLoadTimerOverflow, NULL);
+  struct Timer * const loadTimer = boardMakeChronoTimer(false);
+  assert(loadTimer != nullptr);
+  timerSetCallback(loadTimer, onLoadTimerOverflow, nullptr);
   timerSetOverflow(loadTimer, timerGetFrequency(loadTimer));
 
   timerEnable(loadTimer);
@@ -70,7 +70,7 @@ int main(void)
 
   /* Initialize Work Queue */
   WQ_DEFAULT = init(WorkQueue, &workQueueConfig);
-  assert(WQ_DEFAULT != NULL);
+  assert(WQ_DEFAULT != nullptr);
 
   wqStart(WQ_DEFAULT);
   return 0;

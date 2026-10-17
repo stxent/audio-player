@@ -44,17 +44,17 @@ const struct EntityClass * const Amplifier = &(const struct EntityClass){
 static void busInit(struct Amplifier *amp, bool read)
 {
   /* Lock the interface */
-  ifSetParam(amp->bus, IF_ACQUIRE, NULL);
+  ifSetParam(amp->bus, IF_ACQUIRE, nullptr);
 
   ifSetParam(amp->bus, IF_ADDRESS, &amp->address);
-  ifSetParam(amp->bus, IF_ZEROCOPY, NULL);
+  ifSetParam(amp->bus, IF_ZEROCOPY, nullptr);
   ifSetCallback(amp->bus, onBusEvent, amp);
 
   if (amp->rate)
     ifSetParam(amp->bus, IF_RATE, &amp->rate);
 
   if (read)
-    ifSetParam(amp->bus, IF_I2C_REPEATED_START, NULL);
+    ifSetParam(amp->bus, IF_I2C_REPEATED_START, nullptr);
 
   /* Start bus watchdog */
   startBusTimeout(amp->timer);
@@ -62,9 +62,9 @@ static void busInit(struct Amplifier *amp, bool read)
 /*----------------------------------------------------------------------------*/
 static void invokeUpdate(struct Amplifier *amp)
 {
-  assert(amp->updateCallback != NULL || amp->wq != NULL);
+  assert(amp->updateCallback != nullptr || amp->wq != nullptr);
 
-  if (amp->updateCallback != NULL)
+  if (amp->updateCallback != nullptr)
   {
     amp->updateCallback(amp->updateCallbackArgument);
   }
@@ -83,7 +83,7 @@ static void onBusEvent(void *object)
 
   timerDisable(amp->timer);
 
-  if (ifGetParam(amp->bus, IF_STATUS, NULL) != E_OK)
+  if (ifGetParam(amp->bus, IF_STATUS, nullptr) != E_OK)
   {
     amp->transfer.state = STATE_ERROR_WAIT;
 
@@ -96,8 +96,8 @@ static void onBusEvent(void *object)
     amp->transfer.state = STATE_CONFIG_END;
   }
 
-  ifSetCallback(amp->bus, NULL, NULL);
-  ifSetParam(amp->bus, IF_RELEASE, NULL);
+  ifSetCallback(amp->bus, nullptr, nullptr);
+  ifSetParam(amp->bus, IF_RELEASE, nullptr);
   invokeUpdate(amp);
 }
 /*----------------------------------------------------------------------------*/
@@ -116,8 +116,8 @@ static void onTimerEvent(void *object)
       break;
 
     default:
-      ifSetCallback(amp->bus, NULL, NULL);
-      ifSetParam(amp->bus, IF_RELEASE, NULL);
+      ifSetCallback(amp->bus, nullptr, nullptr);
+      ifSetParam(amp->bus, IF_RELEASE, nullptr);
       amp->transfer.state = STATE_ERROR_TIMEOUT;
       break;
   }
@@ -127,7 +127,10 @@ static void onTimerEvent(void *object)
 /*----------------------------------------------------------------------------*/
 static void startBusTimeout(struct Timer *timer)
 {
-  timerSetOverflow(timer, timerGetFrequency(timer) / 10);
+  static const uint32_t rate = 10; /* Hz */
+  const uint32_t timeout = (timerGetFrequency(timer) + (rate - 1)) / rate;
+
+  timerSetOverflow(timer, timeout);
   timerSetValue(timer, 0);
   timerEnable(timer);
 }
@@ -143,18 +146,18 @@ static void updateTask(void *argument)
 static enum Result ampInit(void *object, const void *arguments)
 {
   const struct AmplifierConfig * const config = arguments;
-  assert(config != NULL);
-  assert(config->bus != NULL && config->timer != NULL);
+  assert(config != nullptr);
+  assert(config->bus != nullptr && config->timer != nullptr);
 
   struct Amplifier * const amp = object;
 
   amp->bus = config->bus;
   amp->timer = config->timer;
-  amp->wq = NULL;
+  amp->wq = nullptr;
 
-  amp->errorCallback = NULL;
-  amp->idleCallback = NULL;
-  amp->updateCallback = NULL;
+  amp->errorCallback = nullptr;
+  amp->idleCallback = nullptr;
+  amp->updateCallback = nullptr;
 
   amp->address = config->address;
   amp->rate = config->rate;
@@ -177,7 +180,7 @@ static void ampDeinit(void *object)
   struct Amplifier * const amp = object;
 
   timerDisable(amp->timer);
-  timerSetCallback(amp->timer, NULL, NULL);
+  timerSetCallback(amp->timer, nullptr, nullptr);
 }
 /*----------------------------------------------------------------------------*/
 void ampSetErrorCallback(void *object, void (*callback)(void *),
@@ -185,7 +188,7 @@ void ampSetErrorCallback(void *object, void (*callback)(void *),
 {
   struct Amplifier * const amp = object;
 
-  assert(callback != NULL);
+  assert(callback != nullptr);
 
   amp->errorCallbackArgument = argument;
   amp->errorCallback = callback;
@@ -196,7 +199,7 @@ void ampSetIdleCallback(void *object, void (*callback)(void *),
 {
   struct Amplifier * const amp = object;
 
-  assert(callback != NULL);
+  assert(callback != nullptr);
 
   amp->idleCallbackArgument = argument;
   amp->idleCallback = callback;
@@ -207,8 +210,8 @@ void ampSetUpdateCallback(void *object, void (*callback)(void *),
 {
   struct Amplifier * const amp = object;
 
-  assert(callback != NULL);
-  assert(amp->wq == NULL);
+  assert(callback != nullptr);
+  assert(amp->wq == nullptr);
 
   amp->updateCallbackArgument = argument;
   amp->updateCallback = callback;
@@ -218,8 +221,8 @@ void ampSetUpdateWorkQueue(void *object, struct WorkQueue *wq)
 {
   struct Amplifier * const amp = object;
 
-  assert(wq != NULL);
-  assert(amp->updateCallback == NULL);
+  assert(wq != nullptr);
+  assert(amp->updateCallback == nullptr);
 
   amp->wq = wq;
 }
@@ -298,7 +301,7 @@ bool ampUpdate(void *object)
 
         if (!amp->changed)
         {
-          if (amp->idleCallback != NULL)
+          if (amp->idleCallback != nullptr)
             amp->idleCallback(amp->idleCallbackArgument);
         }
         else
@@ -310,7 +313,7 @@ bool ampUpdate(void *object)
         amp->ready = false;
         amp->transfer.state = STATE_IDLE;
 
-        if (amp->errorCallback != NULL)
+        if (amp->errorCallback != nullptr)
           amp->errorCallback(amp->errorCallbackArgument);
 
         updated = true;

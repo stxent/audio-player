@@ -22,8 +22,8 @@ int main(void)
   const struct Pin led = pinInit(BOARD_LED_R_PIN);
   pinOutput(led, true);
 
-  struct Timer * const timer = boardMakeChronoTimer();
-  assert(timer != NULL);
+  struct Timer * const timer = boardMakeBaseTimer(false);
+  assert(timer != nullptr);
   timerSetOverflow(timer, timerGetFrequency(timer) / 2);
   timerSetCallback(timer, onTimerOverflow, &event);
   timerEnable(timer);

@@ -86,6 +86,7 @@ struct Board
 
     uint32_t idle;
     uint32_t loops;
+    uint32_t timestamp;
 
     enum PlayerState state;
   } debug;

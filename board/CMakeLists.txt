@@ -38,6 +38,7 @@ target_link_libraries(shared PUBLIC core dpm yaf)
 
 if(USE_NOR)
     target_compile_definitions(shared PUBLIC -DENABLE_NOR)
+    set_source_files_properties("${BOARD}/shared/accel.c" PROPERTIES COMPILE_OPTIONS "${FLAGS_STARTUP}")
 endif()
 
 set(EXECUTABLES "")

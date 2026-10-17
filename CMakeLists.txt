@@ -22,6 +22,10 @@ if(USE_NOR)
     set(FLAGS_PROJECT "${FLAGS_PROJECT} -mslow-flash-data")
 endif()
 
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    set(FLAGS_STARTUP "-fno-builtin")
+endif()
+
 if(USE_LTO)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")

@@ -8,7 +8,6 @@
 #include "board_shared.h"
 #include <dpm/audio/tlv320aic3x.h>
 #include <dpm/button.h>
-#include <halm/core/cortex/systick.h>
 #include <halm/generic/sdio_spi.h>
 #include <halm/generic/timer_factory.h>
 #include <halm/gpio_bus.h>
@@ -71,23 +70,27 @@ struct Entity *boardMakeCodec(struct Interface *i2c, struct Timer *timer)
   return init(TLV320AIC3x, &codecConfig);
 }
 /*----------------------------------------------------------------------------*/
-struct Timer *boardMakeChronoTimer(void)
+struct Timer *boardMakeBaseTimer(bool freerunning)
 {
-  static const struct GpTimerConfig timerConfig = {
+  const struct GpTimerConfig timerConfig = {
       .frequency = 1000,
       .priority = PRI_TIMER_SYS,
-      .channel = 2
+      .event = GPTIMER_MATCH_AUTO,
+      .channel = 3,
+      .freerun = freerunning
   };
 
   return init(GpTimer, &timerConfig);
 }
 /*----------------------------------------------------------------------------*/
-struct Timer *boardMakeLoadTimer(void)
+struct Timer *boardMakeChronoTimer(bool freerunning)
 {
-  static const struct GpTimerConfig timerConfig = {
-      .frequency = 1000000,
+  const struct GpTimerConfig timerConfig = {
+      .frequency = 1000,
       .priority = PRI_TIMER_DBG,
-      .channel = 3
+      .event = GPTIMER_MATCH_AUTO,
+      .channel = 2,
+      .freerun = freerunning
   };
 
   return init(GpTimer, &timerConfig);
@@ -124,14 +127,14 @@ struct Interface *boardMakeI2S(void)
       .rate = 44100,
       .width = I2S_WIDTH_16,
       .tx = {
-          .sda = PIN(0, 9),
+          .mck = BOARD_CODEC_CLOCK_PIN,
           .sck = PIN(0, 7),
+          .sd = PIN(0, 9),
           .ws = PIN(0, 8),
-          .mclk = BOARD_CODEC_CLOCK_PIN,
           .dma = DMA_I2S_TX
       },
       .rx = {
-          .sda = PIN(0, 6),
+          .sd = PIN(0, 6),
           .dma = DMA_I2S_RX
       },
       .priority = PRI_I2S,
@@ -230,7 +233,7 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
   };
 
   package->adc = init(AdcDma, &adcConfig);
-  if (package->adc == NULL)
+  if (package->adc == nullptr)
     return false;
 
   /*
@@ -238,7 +241,7 @@ bool boardSetupAnalogPackage(struct AnalogPackage *package)
    * than that of the hardware events for ADC.
    */
   package->timer = init(GpTimer, &adcTimerConfig);
-  if (package->timer == NULL)
+  if (package->timer == nullptr)
     return false;
 
   /* Init ADC filter */
@@ -265,11 +268,11 @@ bool boardSetupButtonPackage(struct ButtonPackage *package,
   };
 
   package->buttons = init(SimpleGpioBus, &busConfig);
-  if (package->buttons == NULL)
+  if (package->buttons == nullptr)
     return false;
 
   package->timer = timerFactoryCreate(factory);
-  if (package->timer == NULL)
+  if (package->timer == nullptr)
     return false;
 
   memset(package->debounce, 0, sizeof(package->debounce));
@@ -278,22 +281,21 @@ bool boardSetupButtonPackage(struct ButtonPackage *package,
 /*----------------------------------------------------------------------------*/
 bool boardSetupChronoPackage(struct ChronoPackage *package)
 {
-  package->timer = init(SysTick, &(struct SysTickConfig){PRI_TIMER_SYS});
-  if (package->timer == NULL)
+  package->timer = boardMakeBaseTimer(true);
+  if (package->timer == nullptr)
     return false;
-  timerSetOverflow(package->timer, timerGetFrequency(package->timer) / 1000);
 
-  package->factory = init(TimerFactory,
+  package->factory = init(TicklessFactory,
       &(struct TimerFactoryConfig){package->timer});
-  if (package->factory == NULL)
+  if (package->factory == nullptr)
     return false;
 
   package->guardTimer = timerFactoryCreate(package->factory);
-  if (package->guardTimer == NULL)
+  if (package->guardTimer == nullptr)
     return false;
 
   package->mountTimer = timerFactoryCreate(package->factory);
-  if (package->mountTimer == NULL)
+  if (package->mountTimer == nullptr)
     return false;
 
   return true;
@@ -303,21 +305,21 @@ bool boardSetupCodecPackage(struct CodecPackage *package,
     struct TimerFactory *factory)
 {
   package->i2c = boardMakeI2C();
-  if (package->i2c == NULL)
+  if (package->i2c == nullptr)
     return false;
 
   package->ampTimer = timerFactoryCreate(factory);
-  if (package->ampTimer == NULL)
+  if (package->ampTimer == nullptr)
     return false;
   package->amp = boardMakeAmp(package->i2c, package->ampTimer);
-  if (package->amp == NULL)
+  if (package->amp == nullptr)
     return false;
 
   package->codecTimer = timerFactoryCreate(factory);
-  if (package->codecTimer == NULL)
+  if (package->codecTimer == nullptr)
     return false;
   package->codec = boardMakeCodec(package->i2c, package->codecTimer);
-  if (package->codec == NULL)
+  if (package->codec == nullptr)
     return false;
 
   bool ready = bhInit(&package->handler, 2, WQ_LP);

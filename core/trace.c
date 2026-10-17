@@ -16,8 +16,8 @@
 /*----------------------------------------------------------------------------*/
 #define TRACE_BUFFER_SIZE (64 + TRACK_PATH_LENGTH)
 /*----------------------------------------------------------------------------*/
-static struct Interface *traceSerial = NULL;
-static struct Timer *traceTimer = NULL;
+static struct Interface *traceSerial = nullptr;
+static struct Timer *traceTimer = nullptr;
 static char traceBuffer[TRACE_BUFFER_SIZE];
 /*----------------------------------------------------------------------------*/
 enum Result debugTraceInit(void *serial, void *timer)
@@ -29,19 +29,19 @@ enum Result debugTraceInit(void *serial, void *timer)
 /*----------------------------------------------------------------------------*/
 void debugTraceDeinit(void)
 {
-  traceSerial = NULL;
-  traceTimer = NULL;
+  traceSerial = nullptr;
+  traceTimer = nullptr;
 }
 /*----------------------------------------------------------------------------*/
 void debugTrace(const char *format, ...)
 {
-  if (traceSerial == NULL)
+  if (traceSerial == nullptr)
     return;
 
   va_list arguments;
   int length;
 
-  if (traceTimer != NULL)
+  if (traceTimer != nullptr)
   {
     const uint32_t timerValue = timerGetValue(traceTimer);
 
