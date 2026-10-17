@@ -86,6 +86,11 @@ SECTIONS
     heap_start = .;
   } >SRAM1
 
+  .sram0 (NOLOAD) : ALIGN(4)
+  {
+    *(.sram0)
+  } >SRAM0
+
   .sram2 (NOLOAD) : ALIGN(4)
   {
     *(.sram2)

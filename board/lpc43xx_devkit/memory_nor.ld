@@ -90,6 +90,11 @@ SECTIONS
     *(COMMON)
 
     _ebss = .;
+  } >SRAM1
+
+  .sram1 (NOLOAD) : ALIGN(4)
+  {
+    *(.sram1)
 
     . = ALIGN(4);
     heap_start = .;

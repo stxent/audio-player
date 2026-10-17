@@ -21,3 +21,11 @@ void *txBuffers = txBuffersData;
 /* Total: 16384 bytes */
 [[gnu::section(".sram3")]] static FilePath trackBuffersData[TRACK_COUNT];
 void *trackBuffers = trackBuffersData;
+/*----------------------------------------------------------------------------*/
+/* Total: 16896 bytes */
+#ifdef ENABLE_NOR
+[[gnu::section(".sram1")]] static uint8_t sdmmcCacheData[SDMMC_CACHE_ARENA];
+#else
+[[gnu::section(".sram0")]] static uint8_t sdmmcCacheData[SDMMC_CACHE_ARENA];
+#endif /* ENABLE_NOR */
+void *sdmmcCache = sdmmcCacheData;

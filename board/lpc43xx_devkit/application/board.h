@@ -46,6 +46,7 @@ struct Board
 
   struct
   {
+    struct Interface *cache;
     struct Interface *card;
     struct Interface *sdmmc;
     struct Interface *wrapper;

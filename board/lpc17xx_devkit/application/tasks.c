@@ -317,7 +317,7 @@ static void mountTask(void *argument)
     {
       ifSetParam(board->memory.card, IF_BLOCKING, nullptr);
 
-      struct InterfaceProxyConfig wrapperConfig = {
+      const struct InterfaceProxyConfig wrapperConfig = {
           .pipe = board->memory.card
       };
       board->memory.wrapper = init(InterfaceProxy, &wrapperConfig);
@@ -438,7 +438,8 @@ static void startupTask(void *argument)
 
 #ifdef ENABLE_DBG
   timerSetCallback(board->debug.chrono, onLoadTimerOverflow, board);
-  timerSetOverflow(board->debug.chrono, timerGetFrequency(board->debug.chrono));
+  timerSetOverflow(board->debug.chrono, timerGetFrequency(board->debug.chrono)
+      + board->debug.timestamp);
   /* Timer is already enabled */
 
   debugLedsUpdate(board);
@@ -533,6 +534,7 @@ static void debugLedsUpdate(void *argument)
 static void onLoadTimerOverflow(void *argument)
 {
   struct Board * const board = argument;
+  const uint32_t frequency = timerGetFrequency(board->debug.chrono);
 
   struct WqInfo info;
   wqStatistics(WQ_DEFAULT, &info);
@@ -540,8 +542,8 @@ static void onLoadTimerOverflow(void *argument)
   board->debug.loops = info.loops;
   wqAdd(WQ_DEFAULT, debugInfoTask, board);
 
-  board->debug.timestamp += timerGetFrequency(board->debug.chrono);
-  timerSetOverflow(board->debug.chrono, board->debug.timestamp);
+  board->debug.timestamp += frequency;
+  timerSetOverflow(board->debug.chrono, board->debug.timestamp + frequency);
 }
 #endif
 /*----------------------------------------------------------------------------*/

@@ -160,6 +160,7 @@ void appBoardInit(struct Board *board)
   board->fs.handle = nullptr;
 
   board->memory.card = nullptr;
+  board->memory.cache = nullptr;
   board->memory.wrapper = nullptr;
   board->memory.sdmmc = boardMakeSDMMC();
   if (board->memory.sdmmc == nullptr)
@@ -178,7 +179,7 @@ void appBoardInit(struct Board *board)
 
   board->debug.idle = 0;
   board->debug.loops = 0;
-  board->debug.timestamp = 0;
+  board->debug.timestamp = 1; /* Offset for free-running counter */
   board->debug.state = PLAYER_STOPPED;
   board->debug.chrono = boardMakeChronoTimer(true);
   if (board->debug.chrono == nullptr)

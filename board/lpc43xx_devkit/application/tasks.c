@@ -7,6 +7,7 @@
 #include "amplifier.h"
 #include "board.h"
 #include "interface_proxy.h"
+#include "memory.h"
 #include "partitions.h"
 #include "player.h"
 #include "tasks.h"
@@ -14,6 +15,7 @@
 #include <dpm/audio/codec.h>
 #include <dpm/audio/tlv320aic3x.h>
 #include <dpm/button_complex.h>
+#include <halm/generic/caching_proxy.h>
 #include <halm/gpio_bus.h>
 #include <halm/generic/i2c.h>
 #include <halm/generic/mmcsd.h>
@@ -322,33 +324,57 @@ static void mountTask(void *argument)
     {
       ifSetParam(board->memory.card, IF_BLOCKING, nullptr);
 
-      struct InterfaceProxyConfig wrapperConfig = {
+      const struct CachingProxyConfig cacheConfig = {
+          .cache = SDMMC_CACHE_SIZE,
+          .size = SDMMC_SECTOR_SIZE,
+          .arena = sdmmcCache,
           .pipe = board->memory.card
       };
-      board->memory.wrapper = init(InterfaceProxy, &wrapperConfig);
+      board->memory.cache = init(CachingProxy, &cacheConfig);
 
-      if (board->memory.wrapper != nullptr)
+      if (board->memory.cache != nullptr)
       {
-        struct PartitionDescriptor partition;
-
-        if (partitionReadHeader(board->memory.wrapper, 0, 0, &partition))
-          interfaceProxySetOffset(board->memory.wrapper, partition.offset);
-
-        const struct Fat32Config config = {
-            .interface = board->memory.wrapper,
-            .nodes = 8,
-            .threads = 0
+        struct InterfaceProxyConfig wrapperConfig = {
+            .pipe = board->memory.cache
         };
-        board->fs.handle = init(FatHandle, &config);
+        board->memory.wrapper = init(InterfaceProxy, &wrapperConfig);
 
-        if (board->fs.handle != nullptr)
+        if (board->memory.wrapper != nullptr)
         {
-          onCardMounted(board);
+          struct PartitionDescriptor partition;
+
+          if (partitionReadHeader(board->memory.wrapper, 0, 0,
+              &partition))
+          {
+            interfaceProxySetOffset(board->memory.wrapper,
+                partition.offset);
+          }
+
+          const struct Fat32Config config = {
+              .interface = board->memory.wrapper,
+              .nodes = 8,
+              .threads = 0
+          };
+          board->fs.handle = init(FatHandle, &config);
+
+          if (board->fs.handle != nullptr)
+          {
+            onCardMounted(board);
+          }
+          else
+          {
+            deinit(board->memory.wrapper);
+            board->memory.wrapper = nullptr;
+            deinit(board->memory.cache);
+            board->memory.cache = nullptr;
+            deinit(board->memory.card);
+            board->memory.card = nullptr;
+          }
         }
         else
         {
-          deinit(board->memory.wrapper);
-          board->memory.wrapper = nullptr;
+          deinit(board->memory.cache);
+          board->memory.cache = nullptr;
           deinit(board->memory.card);
           board->memory.card = nullptr;
         }
@@ -450,8 +476,10 @@ static void startupTask(void *argument)
 
 #ifdef ENABLE_DBG
   timerSetCallback(board->debug.chrono, onLoadTimerOverflow, board);
-  timerSetOverflow(board->debug.chrono, timerGetFrequency(board->debug.chrono));
+  timerSetOverflow(board->debug.chrono, timerGetFrequency(board->debug.chrono)
+      + board->debug.timestamp);
   /* Timer is already enabled */
+
   debugLedsUpdate(board);
 #endif
 }
@@ -493,6 +521,8 @@ static void unmountTask(void *argument)
     board->fs.handle = nullptr;
     deinit(board->memory.wrapper);
     board->memory.wrapper = nullptr;
+    deinit(board->memory.cache);
+    board->memory.cache = nullptr;
     deinit(board->memory.card);
     board->memory.card = nullptr;
 
@@ -528,6 +558,18 @@ static void debugInfoTask(void *argument)
       loops / (board->debug.idle / 100) : 100;
 
   debugTrace("Heap %u ticks %u cpu %u%%", used, loops, load);
+
+  if (board->memory.cache != nullptr)
+  {
+    uint32_t hits = 0;
+    uint32_t misses = 0;
+
+    ifGetParam(board->memory.cache, IF_CACHE_READ_MATCH, &hits);
+    ifGetParam(board->memory.cache, IF_CACHE_READ_MISS, &misses);
+
+    debugTrace("Cache %lu hits %lu misses", (unsigned long)hits,
+        (unsigned long)misses);
+  }
 }
 #endif
 /*----------------------------------------------------------------------------*/
@@ -554,6 +596,7 @@ static void debugLedsUpdate(void *argument)
 static void onLoadTimerOverflow(void *argument)
 {
   struct Board * const board = argument;
+  const uint32_t frequency = timerGetFrequency(board->debug.chrono);
 
   struct WqInfo info;
   wqStatistics(WQ_DEFAULT, &info);
@@ -561,8 +604,8 @@ static void onLoadTimerOverflow(void *argument)
   board->debug.loops = info.loops;
   wqAdd(WQ_DEFAULT, debugInfoTask, board);
 
-  board->debug.timestamp += timerGetFrequency(board->debug.chrono);
-  timerSetOverflow(board->debug.chrono, board->debug.timestamp);
+  board->debug.timestamp += frequency;
+  timerSetOverflow(board->debug.chrono, board->debug.timestamp + frequency);
 }
 #endif
 /*----------------------------------------------------------------------------*/
